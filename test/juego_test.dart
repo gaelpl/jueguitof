@@ -153,4 +153,50 @@ void main() {
       expect(bloc.estadoActual, isA<JuegoEstadoInicial>());
     });
   });
+
+  group('Pruebas de BLoC - Validacion del Estado Inicial', () {
+    late Tablero tablero;
+    late JuegoBloc bloc;
+
+    setUp(() {
+      final zonas = [Zona(region: Region.azulNorte, tipo: TipoAzul())];
+
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 1, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 2, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 3, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 4, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 5, fila: 0, region: Region.azulNorte, esEstrella: true),
+      ];
+
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+      bloc = JuegoBloc(tablero);
+    });
+
+    test('no permite avanzar de estado si faltan numeros iniciales', () {
+      expect(bloc.estadoActual, isA<JuegoEstadoInicial>());
+
+      bloc.procesarEvento(EventoColocarNumeroInicial(0, 0, 1));
+      bloc.procesarEvento(EventoColocarNumeroInicial(1, 0, 2));
+
+      expect(bloc.estadoActual, isA<JuegoEstadoInicial>());
+    });
+
+    test('avanza a estado turno únicamente cuando se completan los 6 números iniciales', () {
+      bloc.procesarEvento(EventoColocarNumeroInicial(0, 0, 1));
+      bloc.procesarEvento(EventoColocarNumeroInicial(1, 0, 2));
+      bloc.procesarEvento(EventoColocarNumeroInicial(2, 0, 3));
+      bloc.procesarEvento(EventoColocarNumeroInicial(3, 0, 4));
+      bloc.procesarEvento(EventoColocarNumeroInicial(4, 0, 5));
+      bloc.procesarEvento(EventoColocarNumeroInicial(5, 0, 6));
+
+      expect(bloc.estadoActual, isA<JuegoEstadoTurno>());
+    });
+
+    test('cambia a estado fin cuando se procesa abandono', () {
+      bloc.procesarEvento(EventoAbandonar());
+      expect(bloc.estadoActual, isA<JuegoEstadoFin>());
+    });
+  });
 }
