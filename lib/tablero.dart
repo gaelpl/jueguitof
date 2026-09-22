@@ -1,42 +1,37 @@
 import 'juego_logica.dart';
 
-/// Clase auxiliar para representar puntos o coordenadas en el plano.
-class Point2D {
+class Punto2D {
   final int x;
   final int y;
-  const Point2D(this.x, this.y);
+  const Punto2D(this.x, this.y);
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Point2D &&
-          runtimeType == other.runtimeType &&
-          x == other.x &&
-          y == other.y;
+  bool operator ==(Object otro) =>
+      identical(this, otro) ||
+      otro is Punto2D &&
+          runtimeType == otro.runtimeType &&
+          x == otro.x &&
+          y == otro.y;
 
   @override
   int get hashCode => x.hashCode ^ y.hashCode;
 }
 
-/// CLASE PRINCIPAL: Une el tablero con las Zonas del juego, administra las Celdas
-/// y gestiona el plano cartesiano con eje Y invertido (hacia abajo).
 class Tablero {
   final int alto;
   final int ancho;
   final List<Celda> celdas;
-  final Map<Region, Zona> zonasMap;
+  final Map<Region, Zona> mapaZonas;
 
   Tablero({
-    this.alto = 8,
-    this.ancho = 8,
+    this.alto = 7,
+    this.ancho = 7,
     required this.celdas,
     required List<Zona> zonas,
-  }) : zonasMap = {for (var z in zonas) z.region: z};
+  }) : mapaZonas = {for (var z in zonas) z.region: z};
 
-  /// Asocia y obtiene la Zona según la Región consultada.
-  Zona? obtenerZona(Region region) => zonasMap[region];
+  Zona? obtenerZona(Region region) => mapaZonas[region];
 
-  /// Obtiene la celda dada su posición X (columna) e Y (fila, hacia abajo).
   Celda? obtenerCeldaEn(int x, int y) {
     try {
       return celdas.firstWhere((c) => c.columna == x && c.fila == y);
@@ -45,26 +40,37 @@ class Tablero {
     }
   }
 
-  /// Convierte coordenadas cartesianas estándar (Y hacia arriba, origen abajo-izquierda)
-  /// a coordenadas de pantalla (Y hacia abajo, origen arriba-izquierda).
-  static Point2D cartesianoAPantalla(
+  bool colocarValorEn(int x, int y, int valor) {
+    final celda = obtenerCeldaEn(x, y);
+    if (celda == null) return false;
+    return celda.asignarValor(valor);
+  }
+
+  List<Celda> obtenerCeldasEstrella() {
+    return celdas.where((c) => c.esEstrella).toList();
+  }
+
+  bool estanEstrellasCompletas() {
+    final estrellas = obtenerCeldasEstrella();
+    if (estrellas.length != 6) return false;
+
+    final valores = estrellas.map((e) => e.valor).whereType<int>().toSet();
+    return valores.length == 6 && valores.every((v) => v >= 1 && v <= 6);
+  }
+
+  static Punto2D cartesianoAPantalla(
     int xCartesiano,
     int yCartesiano,
     int altoTablero,
   ) {
-    int xPantalla = xCartesiano;
-    int yPantalla = (altoTablero - 1) - yCartesiano;
-    return Point2D(xPantalla, yPantalla);
+    return Punto2D(xCartesiano, (altoTablero - 1) - yCartesiano);
   }
 
-  /// Convierte coordenadas de pantalla (Y hacia abajo) a cartesianas (Y hacia arriba).
-  static Point2D pantallaACartesiano(
+  static Punto2D pantallaACartesiano(
     int xPantalla,
     int yPantalla,
     int altoTablero,
   ) {
-    int xCartesiano = xPantalla;
-    int yCartesiano = (altoTablero - 1) - yPantalla;
-    return Point2D(xCartesiano, yCartesiano);
+    return Punto2D(xPantalla, (altoTablero - 1) - yPantalla);
   }
 }
