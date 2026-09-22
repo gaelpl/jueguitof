@@ -135,4 +135,22 @@ void main() {
       expect(puntoPantalla, equals(const Punto2D(0, 0)));
     });
   });
+
+  group('Pruebas de BLoC - Inicializacion de estados', () {
+    late Tablero tablero;
+    late JuegoBloc bloc;
+
+    setUp(() {
+      final zonas = [Zona(region: Region.azulNorte, tipo: TipoAzul())];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, esEstrella: true),
+      ];
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+      bloc = JuegoBloc(tablero);
+    });
+
+    test('el juego inicia correctamente en el estado inicial', () {
+      expect(bloc.estadoActual, isA<JuegoEstadoInicial>());
+    });
+  });
 }
