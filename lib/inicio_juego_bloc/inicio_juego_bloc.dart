@@ -1,0 +1,17 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../juego_logica.dart';
+import 'inicio_juego_event.dart';
+import 'inicio_juego_state.dart';
+
+export 'inicio_juego_event.dart';
+export 'inicio_juego_state.dart';
+
+class InicioJuegoBloc extends Bloc<InicioJuegoEvento, InicioJuegoEstado> {
+  InicioJuegoBloc(Tablero tableroInicial)
+      : super(InicioJuegoEstado(tablero: tableroInicial)) {
+
+    on<EventoSeleccionarNumero>((event, emit) {
+      emit(state.copyWith(numeroSeleccionado: event.numero));
+    });
+  }
+}

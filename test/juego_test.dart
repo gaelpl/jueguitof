@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguitof/juego_logica.dart';
+import 'package:jueguitof/inicio_juego_bloc/inicio_juego_bloc.dart';
 
 void main() {
   group('Regla Rojo / Amarillo (todos diferentes)', () {
@@ -197,6 +198,30 @@ void main() {
     test('cambia a estado fin cuando se procesa abandono', () {
       bloc.procesarEvento(EventoAbandonar());
       expect(bloc.estadoActual, isA<JuegoEstadoFin>());
+    });
+  });
+
+  group('Pruebas del BLoC de Seleccion Inicial - Parte 1', () {
+    late Tablero tablero;
+    late InicioJuegoBloc bloc;
+
+    setUp(() {
+      final zonas = [Zona(region: Region.azulNorte, tipo: TipoAzul())];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, esEstrella: true),
+      ];
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+      bloc = InicioJuegoBloc(tablero);
+    });
+
+    test('cambia el numero seleccionado en la paleta correctamente', () {
+      bloc.add(EventoSeleccionarNumero(4));
+      expect(
+        bloc.stream,
+        emitsThrough(predicate<InicioJuegoEstado>(
+          (state) => state.numeroSeleccionado == 4,
+        )),
+      );
     });
   });
 }
