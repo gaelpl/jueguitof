@@ -12,3 +12,5 @@ class EventoColocarNumeroEnEstrella extends InicioJuegoEvento {
   final int fila;
   EventoColocarNumeroEnEstrella(this.columna, this.fila);
 }
+
+class EventoConfirmarInicio extends InicioJuegoEvento {}

@@ -29,7 +29,17 @@ class InicioJuegoBloc extends Bloc<InicioJuegoEvento, InicioJuegoEstado> {
         celdaObjetivo.asignarValor(valorAColocar);
       }
 
-      emit(state.copyWith(tablero: tablero));
+      final listos = tablero.estanEstrellasCompletas();
+      emit(state.copyWith(
+        tablero: tablero,
+        estanListasEstrellas: listos,
+      ));
+    });
+
+    on<EventoConfirmarInicio>((event, emit) {
+      if (state.estanListasEstrellas) {
+        emit(state.copyWith(juegoIniciado: true));
+      }
     });
   }
 }

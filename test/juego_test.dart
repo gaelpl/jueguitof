@@ -239,5 +239,18 @@ void main() {
       expect(tablero.obtenerCeldaEn(0, 0)!.valor, isNull);
       expect(tablero.obtenerCeldaEn(1, 0)!.valor, equals(2));
     });
+
+    test('habilita la bandera de estrellas completas cuando se llenan las casillas requeridas', () async {
+      for (int i = 0; i < 2; i++) {
+        bloc.add(EventoSeleccionarNumero(i + 1));
+        bloc.add(EventoColocarNumeroEnEstrella(i, 0));
+        await pumpEventQueue();
+      }
+
+      bloc.add(EventoConfirmarInicio());
+      await pumpEventQueue();
+
+      expect(bloc.state.juegoIniciado, isFalse);
+    });
   });
 }
