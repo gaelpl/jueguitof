@@ -133,7 +133,7 @@ class Celda {
 
   int? get valor => _valor;
 
-  bool asignarValor(int nuevoValor) {
+  bool asignarValor(int? nuevoValor) {
     _valor = nuevoValor;
     return true;
   }

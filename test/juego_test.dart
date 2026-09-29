@@ -209,6 +209,7 @@ void main() {
       final zonas = [Zona(region: Region.azulNorte, tipo: TipoAzul())];
       final celdas = [
         Celda(columna: 0, fila: 0, region: Region.azulNorte, esEstrella: true),
+        Celda(columna: 1, fila: 0, region: Region.azulNorte, esEstrella: true),
       ];
       tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
       bloc = InicioJuegoBloc(tablero);
@@ -218,10 +219,25 @@ void main() {
       bloc.add(EventoSeleccionarNumero(4));
       expect(
         bloc.stream,
-        emitsThrough(predicate<InicioJuegoEstado>(
-          (state) => state.numeroSeleccionado == 4,
-        )),
+        emitsThrough(
+          predicate<InicioJuegoEstado>(
+            (state) => state.numeroSeleccionado == 4,
+          ),
+        ),
       );
+    });
+
+    test('reubica un numero si se asigna a otra estrella para evitar duplicados', () async {
+      bloc.add(EventoSeleccionarNumero(2));
+      bloc.add(EventoColocarNumeroEnEstrella(0, 0));
+      await pumpEventQueue();
+
+      bloc.add(EventoSeleccionarNumero(2));
+      bloc.add(EventoColocarNumeroEnEstrella(1, 0));
+      await pumpEventQueue();
+
+      expect(tablero.obtenerCeldaEn(0, 0)!.valor, isNull);
+      expect(tablero.obtenerCeldaEn(1, 0)!.valor, equals(2));
     });
   });
 }
