@@ -118,7 +118,17 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
           title: const Text('Brilliant - Selección Inicial'),
           centerTitle: true,
         ),
-        body: BlocBuilder<InicioJuegoBloc, InicioJuegoEstado>(
+        body: BlocConsumer<InicioJuegoBloc, InicioJuegoEstado>(
+          listener: (context, state) {
+            if (state.juegoIniciado) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('¡Partida Iniciada Correctamente!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
           builder: (context, state) {
             return SafeArea(
               child: Column(
@@ -138,7 +148,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                     ),
                   ),
 
-                  // Cuadrícula 7x7 del Tablero Móvil
+                  // Cuadrícula 7x7 del Tablero Móvil con detección de gestos
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -163,36 +173,48 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
 
                             if (celda == null) return const SizedBox();
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: _obtenerColor(celda.region),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: celda.esEstrella
-                                      ? Colors.black
-                                      : Colors.white24,
-                                  width: celda.esEstrella ? 2 : 1,
+                            return GestureDetector(
+                              onTap: celda.esEstrella
+                                  ? () {
+                                      context.read<InicioJuegoBloc>().add(
+                                        EventoColocarNumeroEnEstrella(
+                                          col,
+                                          fila,
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: _obtenerColor(celda.region),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: celda.esEstrella
+                                        ? Colors.black
+                                        : Colors.white24,
+                                    width: celda.esEstrella ? 2 : 1,
+                                  ),
                                 ),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  if (celda.esEstrella && celda.valor == null)
-                                    const Icon(
-                                      Icons.star,
-                                      color: Colors.black54,
-                                      size: 22,
-                                    ),
-                                  if (celda.valor != null && celda.valor! > 0)
-                                    Text(
-                                      '${celda.valor}',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    if (celda.esEstrella && celda.valor == null)
+                                      const Icon(
+                                        Icons.star,
+                                        color: Colors.black54,
+                                        size: 22,
                                       ),
-                                    ),
-                                ],
+                                    if (celda.valor != null && celda.valor! > 0)
+                                      Text(
+                                        '${celda.valor}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -231,7 +253,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                     ),
                   ),
 
-                  // Botón "INICIO"
+                  // Botón "INICIO" Reactivo
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: SizedBox(
@@ -239,12 +261,20 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                       height: 48,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[400],
+                          backgroundColor: state.estanListasEstrellas
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey[400],
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: null,
+                        onPressed: state.estanListasEstrellas
+                            ? () {
+                                context.read<InicioJuegoBloc>().add(
+                                  EventoConfirmarInicio(),
+                                );
+                              }
+                            : null,
                         child: const Text(
                           'INICIO',
                           style: TextStyle(
