@@ -58,13 +58,14 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
     List<Celda> celdas = [];
     for (int fila = 0; fila < 7; fila++) {
       for (int columna = 0; columna < 7; columna++) {
+        // Posiciones exactas de las 6 estrellas
         bool esEstrella =
             (columna == 2 && fila == 0) ||
-            (columna == 6 && fila == 1) ||
+            (columna == 5 && fila == 1) || // Movida a col 5
             (columna == 1 && fila == 3) ||
             (columna == 4 && fila == 3) ||
             (columna == 2 && fila == 5) ||
-            (columna == 5 && fila == 6);
+            (columna == 4 && fila == 6); // Movida a col 4
 
         Region reg = _obtenerRegion(columna, fila);
         celdas.add(
@@ -82,16 +83,21 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
 
   Region _obtenerRegion(int col, int fila) {
     if (col == 2 && fila == 0) return Region.azulNorte;
-    if (col == 6 && fila == 1) return Region.lilaNorte;
+    if (col == 5 && fila == 1) return Region.lilaNorte;
     if (col == 1 && fila == 3) return Region.rojoNoroeste;
     if (col == 4 && fila == 3) return Region.verdeNoroeste;
     if (col == 2 && fila == 5) return Region.lilaSuroeste;
-    if (col == 5 && fila == 6) return Region.rojoSureste;
+    if (col == 4 && fila == 6) return Region.rojoSureste;
     return Region.verdeNoroeste;
   }
 
-  Color _obtenerColor(Region region) {
-    switch (region) {
+  Color _obtenerColor(Celda celda) {
+    // Si la celda no es estrella, usaremos un color gris neutro
+    if (!celda.esEstrella) {
+      return const Color(0xFFE0E0E0);
+    }
+
+    switch (celda.region) {
       case Region.azulNorte:
       case Region.azulSureste:
         return const Color(0xFF2196F3);
@@ -148,7 +154,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                     ),
                   ),
 
-                  // Cuadrícula 7x7 del Tablero Móvil con detección de gestos
+                  // Cuadrícula 7x7 del Tablero
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -186,12 +192,12 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                                   : null,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: _obtenerColor(celda.region),
+                                  color: _obtenerColor(celda),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
                                     color: celda.esEstrella
                                         ? Colors.black
-                                        : Colors.white24,
+                                        : Colors.black12,
                                     width: celda.esEstrella ? 2 : 1,
                                   ),
                                 ),
