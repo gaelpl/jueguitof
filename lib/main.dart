@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'juego_logica.dart'; // Importa tu lógica intacta
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'juego_logica.dart';
+import 'inicio_juego_bloc/inicio_juego_bloc.dart';
 
 void main() {
   runApp(const BrilliantApp());
@@ -11,65 +13,92 @@ class BrilliantApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Brilliant Board Game',
+      title: 'Brilliant - Selección Inicial',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const PantallaPrincipal(),
+      home: const PantallaSeleccionInicial(),
     );
   }
 }
 
-class PantallaPrincipal extends StatefulWidget {
-  const PantallaPrincipal({super.key});
+class PantallaSeleccionInicial extends StatefulWidget {
+  const PantallaSeleccionInicial({super.key});
 
   @override
-  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
+  State<PantallaSeleccionInicial> createState() =>
+      _PantallaSeleccionInicialState();
 }
 
-class _PantallaPrincipalState extends State<PantallaPrincipal> {
-  // Creamos una muestra de zonas utilizando tus clases
-  final List<Zona> zonasDelJuego = [
-    Zona(region: Region.azulNorte, tipo: TipoAzul()),
-    Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
-    Zona(region: Region.rojoNoroeste, tipo: TipoRojoAmarillo()),
-    Zona(region: Region.lilaNorte, tipo: TipoMorado()),
-  ];
+class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
+  late Tablero tablero;
+
+  @override
+  void initState() {
+    super.initState();
+    tablero = _construirTableroMapa1();
+  }
+
+  Tablero _construirTableroMapa1() {
+    final zonas = [
+      Zona(region: Region.azulNorte, tipo: TipoAzul()),
+      Zona(region: Region.rojoNoroeste, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+      Zona(region: Region.lilaNorte, tipo: TipoMorado()),
+      Zona(region: Region.amarillo, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.lilaSuroeste, tipo: TipoMorado()),
+      Zona(region: Region.rojoSureste, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.verdeEste, tipo: TipoVerde()),
+      Zona(region: Region.azulSureste, tipo: TipoAzul()),
+    ];
+
+    List<Celda> celdas = [];
+    for (int fila = 0; fila < 7; fila++) {
+      for (int columna = 0; columna < 7; columna++) {
+        bool esEstrella = (columna == 2 && fila == 0) ||
+            (columna == 6 && fila == 1) ||
+            (columna == 1 && fila == 3) ||
+            (columna == 4 && fila == 3) ||
+            (columna == 2 && fila == 5) ||
+            (columna == 5 && fila == 6);
+
+        Region reg = _obtenerRegion(columna, fila);
+        celdas.add(Celda(
+          columna: columna,
+          fila: fila,
+          region: reg,
+          esEstrella: esEstrella,
+        ));
+      }
+    }
+    return Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+  }
+
+  Region _obtenerRegion(int col, int fila) {
+    if (col == 2 && fila == 0) return Region.azulNorte;
+    if (col == 6 && fila == 1) return Region.lilaNorte;
+    if (col == 1 && fila == 3) return Region.rojoNoroeste;
+    if (col == 4 && fila == 3) return Region.verdeNoroeste;
+    if (col == 2 && fila == 5) return Region.lilaSuroeste;
+    if (col == 5 && fila == 6) return Region.rojoSureste;
+    return Region.verdeNoroeste;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Brilliant - Reglas y Zonas'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: zonasDelJuego.length,
-          itemBuilder: (context, index) {
-            final zona = zonasDelJuego[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              elevation: 3,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: zona.tipo.color,
-                  child: const Icon(Icons.palette, color: Colors.white),
-                ),
-                title: Text(
-                  zona.region.name.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(zona.tipo.descripcion),
-                trailing: Text(
-                  'Puntuación máx: ${zona.tipo.puntuaciones[1]} pts',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            );
-          },
+    return BlocProvider(
+      create: (_) => InicioJuegoBloc(tablero),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Brilliant - Selección Inicial'),
+          centerTitle: true,
+        ),
+        body: const SafeArea(
+          child: Center(
+            child: Text('Estructura base de la interfaz inicial cargada'),
+          ),
         ),
       ),
     );
