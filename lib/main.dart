@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'juego_logica.dart';
 import 'inicio_juego_bloc/inicio_juego_bloc.dart';
 
@@ -57,7 +58,8 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
     List<Celda> celdas = [];
     for (int fila = 0; fila < 7; fila++) {
       for (int columna = 0; columna < 7; columna++) {
-        bool esEstrella = (columna == 2 && fila == 0) ||
+        bool esEstrella =
+            (columna == 2 && fila == 0) ||
             (columna == 6 && fila == 1) ||
             (columna == 1 && fila == 3) ||
             (columna == 4 && fila == 3) ||
@@ -65,12 +67,14 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
             (columna == 5 && fila == 6);
 
         Region reg = _obtenerRegion(columna, fila);
-        celdas.add(Celda(
-          columna: columna,
-          fila: fila,
-          region: reg,
-          esEstrella: esEstrella,
-        ));
+        celdas.add(
+          Celda(
+            columna: columna,
+            fila: fila,
+            region: reg,
+            esEstrella: esEstrella,
+          ),
+        );
       }
     }
     return Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
@@ -86,6 +90,25 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
     return Region.verdeNoroeste;
   }
 
+  Color _obtenerColor(Region region) {
+    switch (region) {
+      case Region.azulNorte:
+      case Region.azulSureste:
+        return const Color(0xFF2196F3);
+      case Region.rojoNoroeste:
+      case Region.rojoSureste:
+        return const Color(0xFFE53935);
+      case Region.verdeNoroeste:
+      case Region.verdeEste:
+        return const Color(0xFF4CAF50);
+      case Region.lilaNorte:
+      case Region.lilaSuroeste:
+        return const Color(0xFF8E24AA);
+      case Region.amarillo:
+        return const Color(0xFFFFEB3B);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -95,10 +118,148 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
           title: const Text('Brilliant - Selección Inicial'),
           centerTitle: true,
         ),
-        body: const SafeArea(
-          child: Center(
-            child: Text('Estructura base de la interfaz inicial cargada'),
-          ),
+        body: BlocBuilder<InicioJuegoBloc, InicioJuegoEstado>(
+          builder: (context, state) {
+            return SafeArea(
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 16,
+                    ),
+                    child: Text(
+                      'Asigna los números del 1 al 6 en las casillas estrella',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  // Cuadrícula 7x7 del Tablero Móvil
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 7,
+                                crossAxisSpacing: 3,
+                                mainAxisSpacing: 3,
+                              ),
+                          itemCount: 49,
+                          itemBuilder: (context, index) {
+                            int col = index % 7;
+                            int fila = index ~/ 7;
+                            final celda = state.tablero.obtenerCeldaEn(
+                              col,
+                              fila,
+                            );
+
+                            if (celda == null) return const SizedBox();
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: _obtenerColor(celda.region),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: celda.esEstrella
+                                      ? Colors.black
+                                      : Colors.white24,
+                                  width: celda.esEstrella ? 2 : 1,
+                                ),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  if (celda.esEstrella && celda.valor == null)
+                                    const Icon(
+                                      Icons.star,
+                                      color: Colors.black54,
+                                      size: 22,
+                                    ),
+                                  if (celda.valor != null && celda.valor! > 0)
+                                    Text(
+                                      '${celda.valor}',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Paleta de Selección de Números (1 al 6)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.grey[100],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(6, (i) {
+                        int num = i + 1;
+                        bool seleccionado = state.numeroSeleccionado == num;
+                        return ChoiceChip(
+                          label: Text(
+                            '$num',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: seleccionado ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          selected: seleccionado,
+                          selectedColor: Theme.of(context).colorScheme.primary,
+                          onSelected: (_) {
+                            context.read<InicioJuegoBloc>().add(
+                              EventoSeleccionarNumero(num),
+                            );
+                          },
+                        );
+                      }),
+                    ),
+                  ),
+
+                  // Botón "INICIO"
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[400],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: null,
+                        child: const Text(
+                          'INICIO',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
