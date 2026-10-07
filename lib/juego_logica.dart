@@ -197,3 +197,19 @@ List<Celda> obtenerCeldasObjetivoValidas({
 
   return validas;
 }
+
+/// Calcula el puntaje acumulado total del tablero sumando los puntos otorgados por cada región.
+int calcularPuntuacionTotal(Tablero tablero) {
+  int puntajeTotal = 0;
+
+  for (var zona in tablero.mapaZonas.values) {
+    final valores = extraerValoresDeBloque(tablero.celdas, zona.region);
+    final cantidad = valores.length;
+    if (cantidad > 0) {
+      final puntos = zona.tipo.puntuaciones[cantidad] ?? 0;
+      puntajeTotal += puntos;
+    }
+  }
+
+  return puntajeTotal;
+}

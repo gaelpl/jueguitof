@@ -227,18 +227,21 @@ void main() {
       );
     });
 
-    test('reubica un numero si se asigna a otra estrella para evitar duplicados', () async {
-      bloc.add(EventoSeleccionarNumero(2));
-      bloc.add(EventoColocarNumeroEnEstrella(0, 0));
-      await pumpEventQueue();
+    test(
+      'reubica un numero si se asigna a otra estrella para evitar duplicados',
+      () async {
+        bloc.add(EventoSeleccionarNumero(2));
+        bloc.add(EventoColocarNumeroEnEstrella(0, 0));
+        await pumpEventQueue();
 
-      bloc.add(EventoSeleccionarNumero(2));
-      bloc.add(EventoColocarNumeroEnEstrella(1, 0));
-      await pumpEventQueue();
+        bloc.add(EventoSeleccionarNumero(2));
+        bloc.add(EventoColocarNumeroEnEstrella(1, 0));
+        await pumpEventQueue();
 
-      expect(tablero.obtenerCeldaEn(0, 0)!.valor, isNull);
-      expect(tablero.obtenerCeldaEn(1, 0)!.valor, equals(2));
-    });
+        expect(tablero.obtenerCeldaEn(0, 0)!.valor, isNull);
+        expect(tablero.obtenerCeldaEn(1, 0)!.valor, equals(2));
+      },
+    );
 
     test('habilita la bandera de estrellas completas cuando se llenan las casillas requeridas', () async {
       for (int i = 0; i < 2; i++) {
@@ -281,10 +284,30 @@ void main() {
         Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
       ];
       final celdas = [
-        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3), // Celda Ancla
-        Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: null), // Adyacente Derecha
-        Celda(columna: 0, fila: 1, region: Region.verdeNoroeste, valor: null), // Adyacente Abajo
-        Celda(columna: 3, fila: 3, region: Region.verdeNoroeste, valor: null), // Celda Distante
+        Celda(
+          columna: 0,
+          fila: 0,
+          region: Region.azulNorte,
+          valor: 3,
+        ), // Celda Ancla
+        Celda(
+          columna: 1,
+          fila: 0,
+          region: Region.azulNorte,
+          valor: null,
+        ), // Adyacente Derecha
+        Celda(
+          columna: 0,
+          fila: 1,
+          region: Region.verdeNoroeste,
+          valor: null,
+        ), // Adyacente Abajo
+        Celda(
+          columna: 3,
+          fila: 3,
+          region: Region.verdeNoroeste,
+          valor: null,
+        ), // Celda Distante
       ];
       tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
     });
@@ -298,15 +321,35 @@ void main() {
       expect(adyacentes.any((c) => c.columna == 0 && c.fila == 1), isTrue);
     });
 
-    test('identifica casillas objetivo validas para colocar el valor del dado', () {
-      final ancla = tablero.obtenerCeldaEn(0, 0)!;
-      final validas = obtenerCeldasObjetivoValidas(
-        tablero: tablero,
-        celdaAncla: ancla,
-        valorAColocar: 3,
-      );
+    test(
+      'identifica casillas objetivo validas para colocar el valor del dado',
+      () {
+        final ancla = tablero.obtenerCeldaEn(0, 0)!;
+        final validas = obtenerCeldasObjetivoValidas(
+          tablero: tablero,
+          celdaAncla: ancla,
+          valorAColocar: 3,
+        );
 
-      expect(validas.length, equals(2));
+        expect(validas.length, equals(2));
+      },
+    );
+  });
+
+  group('Pruebas del Sistema de Puntuación', () {
+    test('calcula correctamente la puntuacion total acumulada del tablero', () {
+      final zonas = [
+        Zona(region: Region.azulNorte, tipo: TipoAzul()),
+        Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+      ];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+        Celda(columna: 1, fila: 0, region: Region.verdeNoroeste, valor: 5),
+      ];
+      final tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+
+      final puntaje = calcularPuntuacionTotal(tablero);
+      expect(puntaje, greaterThan(0));
     });
   });
 }
