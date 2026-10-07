@@ -271,4 +271,42 @@ void main() {
       }
     });
   });
+
+  group('Pruebas de Selección de Ancla y Adyacencias Válidas', () {
+    late Tablero tablero;
+
+    setUp(() {
+      final zonas = [
+        Zona(region: Region.azulNorte, tipo: TipoAzul()),
+        Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+      ];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3), // Celda Ancla
+        Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: null), // Adyacente Derecha
+        Celda(columna: 0, fila: 1, region: Region.verdeNoroeste, valor: null), // Adyacente Abajo
+        Celda(columna: 3, fila: 3, region: Region.verdeNoroeste, valor: null), // Celda Distante
+      ];
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+    });
+
+    test('obtiene unicamente celdas adyacentes ortogonales al ancla', () {
+      final ancla = tablero.obtenerCeldaEn(0, 0)!;
+      final adyacentes = obtenerCeldasAdyacentes(tablero, ancla);
+
+      expect(adyacentes.length, equals(2));
+      expect(adyacentes.any((c) => c.columna == 1 && c.fila == 0), isTrue);
+      expect(adyacentes.any((c) => c.columna == 0 && c.fila == 1), isTrue);
+    });
+
+    test('identifica casillas objetivo validas para colocar el valor del dado', () {
+      final ancla = tablero.obtenerCeldaEn(0, 0)!;
+      final validas = obtenerCeldasObjetivoValidas(
+        tablero: tablero,
+        celdaAncla: ancla,
+        valorAColocar: 3,
+      );
+
+      expect(validas.length, equals(2));
+    });
+  });
 }

@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'tablero.dart';
+
 export 'tablero.dart';
 export 'juego_bloc.dart';
 export 'dado.dart';
@@ -145,4 +147,53 @@ List<int> extraerValoresDeBloque(List<Celda> tablero, Region region) {
       .where((celda) => celda.region == region && celda.valor != null)
       .map((celda) => celda.valor!)
       .toList();
+}
+
+/// Obtiene las celdas adyacentes ortogonales (arriba, abajo, izquierda, derecha) de una celda ancla.
+List<Celda> obtenerCeldasAdyacentes(Tablero tablero, Celda ancla) {
+  final List<Celda> adyacentes = [];
+  final direcciones = [
+    {'col': 0, 'fila': -1}, // Arriba
+    {'col': 0, 'fila': 1}, // Abajo
+    {'col': -1, 'fila': 0}, // Izquierda
+    {'col': 1, 'fila': 0}, // Derecha
+  ];
+
+  for (var dir in direcciones) {
+    final nuevaCol = ancla.columna + dir['col']!;
+    final nuevaFila = ancla.fila + dir['fila']!;
+    final celda = tablero.obtenerCeldaEn(nuevaCol, nuevaFila);
+    if (celda != null) {
+      adyacentes.add(celda);
+    }
+  }
+
+  return adyacentes;
+}
+
+/// Filtra de las celdas adyacentes al ancla solo aquellas vacías que permiten colocar el valor del dado.
+List<Celda> obtenerCeldasObjetivoValidas({
+  required Tablero tablero,
+  required Celda celdaAncla,
+  required int valorAColocar,
+}) {
+  final adyacentes = obtenerCeldasAdyacentes(tablero, celdaAncla);
+  final List<Celda> validas = [];
+
+  for (var celda in adyacentes) {
+    if (celda.valor == null) {
+      final valoresActuales = extraerValoresDeBloque(
+        tablero.celdas,
+        celda.region,
+      );
+      final zona = tablero.obtenerZona(celda.region);
+
+      if (zona != null &&
+          zona.esInsercionValida(valoresActuales, valorAColocar)) {
+        validas.add(celda);
+      }
+    }
+  }
+
+  return validas;
 }
