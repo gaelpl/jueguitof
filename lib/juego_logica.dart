@@ -2,6 +2,7 @@ import 'dart:ui';
 
 export 'tablero.dart';
 export 'juego_bloc.dart';
+export 'dado.dart';
 
 int calcular() {
   return 6 * 7;

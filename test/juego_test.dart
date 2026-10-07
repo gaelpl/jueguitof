@@ -253,4 +253,22 @@ void main() {
       expect(bloc.state.juegoIniciado, isFalse);
     });
   });
+
+  group('Pruebas del Modelo Dado', () {
+    test('crea un dado con valor por defecto o especifico', () {
+      const dadoDefecto = Dado();
+      const dadoCinco = Dado(5);
+
+      expect(dadoDefecto.valor, equals(1));
+      expect(dadoCinco.valor, equals(5));
+    });
+
+    test('lanzar genera valores validos dentro del rango 1 a 6', () {
+      for (int i = 0; i < 50; i++) {
+        final dado = Dado.lanzar();
+        expect(dado.valor, greaterThanOrEqualTo(1));
+        expect(dado.valor, lessThanOrEqualTo(6));
+      }
+    });
+  });
 }
