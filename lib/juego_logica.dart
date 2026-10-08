@@ -5,6 +5,7 @@ import 'tablero.dart';
 export 'tablero.dart';
 export 'juego_bloc.dart';
 export 'dado.dart';
+export 'juego_turno_bloc/juego_turno_bloc.dart';
 
 int calcular() {
   return 6 * 7;

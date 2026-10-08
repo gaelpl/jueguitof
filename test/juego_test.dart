@@ -352,4 +352,62 @@ void main() {
       expect(puntaje, greaterThan(0));
     });
   });
+
+  group('Pruebas de JuegoTurnoBloc', () {
+    late Tablero tablero;
+    late JuegoTurnoBloc bloc;
+
+    setUp(() {
+      final zonas = [
+        Zona(region: Region.azulNorte, tipo: TipoAzul()),
+        Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+      ];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+        Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: null),
+      ];
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+      bloc = JuegoTurnoBloc(tablero);
+    });
+
+    tearDown(() {
+      bloc.close();
+    });
+
+    test('lanzar dado actualiza el estado con el nuevo dado', () async {
+      bloc.add(EventoLanzarDado(dadoForzado: const Dado(5)));
+      await pumpEventQueue();
+
+      expect(bloc.state.dadoActual, equals(const Dado(5)));
+    });
+
+    test('seleccionar ancla calcula correctamente las celdas objetivo validas', () async {
+      bloc.add(EventoLanzarDado(dadoForzado: const Dado(3)));
+      await pumpEventQueue();
+
+      final ancla = tablero.obtenerCeldaEn(0, 0)!;
+      bloc.add(EventoSeleccionarAncla(ancla));
+      await pumpEventQueue();
+
+      expect(bloc.state.celdaAncla, equals(ancla));
+      expect(bloc.state.celdasObjetivoValidas.length, equals(1));
+    });
+
+    test('colocar numero actualiza casilla, puntaje y limpia ancla', () async {
+      bloc.add(EventoLanzarDado(dadoForzado: const Dado(3)));
+      await pumpEventQueue();
+
+      final ancla = tablero.obtenerCeldaEn(0, 0)!;
+      bloc.add(EventoSeleccionarAncla(ancla));
+      await pumpEventQueue();
+
+      final objetivo = bloc.state.celdasObjetivoValidas.first;
+      bloc.add(EventoColocarNumeroEnObjetivo(objetivo));
+      await pumpEventQueue();
+
+      expect(objetivo.valor, equals(3));
+      expect(bloc.state.celdaAncla, isNull);
+      expect(bloc.state.celdasObjetivoValidas, isEmpty);
+    });
+  });
 }
