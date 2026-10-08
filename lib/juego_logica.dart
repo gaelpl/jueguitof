@@ -199,15 +199,23 @@ List<Celda> obtenerCeldasObjetivoValidas({
   return validas;
 }
 
-/// Calcula el puntaje acumulado total del tablero sumando los puntos otorgados por cada región.
+/// Calcula el puntaje total del tablero otorgando puntos UNICAMENTE cuando un bloque/zona se llena por completo.
 int calcularPuntuacionTotal(Tablero tablero) {
   int puntajeTotal = 0;
 
   for (var zona in tablero.mapaZonas.values) {
+    // Celdas totales pertenecientes a esta región
+    final celdasRegion = tablero.celdas
+        .where((c) => c.region == zona.region)
+        .toList();
+    final totalCeldasRegion = celdasRegion.length;
+
+    // Celdas llenas con valor en esta región
     final valores = extraerValoresDeBloque(tablero.celdas, zona.region);
-    final cantidad = valores.length;
-    if (cantidad > 0) {
-      final puntos = zona.tipo.puntuaciones[cantidad] ?? 0;
+
+    // Solo si el bloque está COMPLETAMENTE lleno
+    if (valores.length == totalCeldasRegion && totalCeldasRegion > 0) {
+      final puntos = zona.tipo.puntuaciones[totalCeldasRegion] ?? 0;
       puntajeTotal += puntos;
     }
   }
