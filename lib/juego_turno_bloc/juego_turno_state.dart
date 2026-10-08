@@ -48,7 +48,7 @@ class JuegoTurnoEstado {
       tablero: tablero ?? this.tablero,
       dado1: limpiarDados ? null : (dado1 ?? this.dado1),
       dado2: limpiarDados ? null : (dado2 ?? this.dado2),
-      indiceDadoAncla: (limpiarDados || limpiarAncla)
+      indiceDadoAncla: limpiarDados
           ? null
           : (indiceDadoAncla ?? this.indiceDadoAncla),
       celdaAncla: (limpiarDados || limpiarAncla)

@@ -37,7 +37,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       emit(
         state.copyWith(
           indiceDadoAncla: event.indiceDadoAncla,
-          limpiarAncla: true,
+          limpiarAncla: true, // Limpia el ancla anterior al cambiar de dado
         ),
       );
     }
@@ -47,10 +47,24 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoSeleccionarAnclaTablero event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
-    final dAncla = state.dadoAncla;
-    final dColocar = state.dadoColocar;
+    // Si aún no se ha elegido explícitamente el dado de ancla, elegimos por defecto el dado 1
+    int indiceAncla = state.indiceDadoAncla ?? 0;
 
-    // Solo permite seleccionar casillas cuyo valor coincida con el dado elegido como ancla
+    // Si la celda tocada coincide con el valor del dado 2 pero teníamos el dado 1,
+    // auto-seleccionamos el dado que coincide con la celda tocada
+    if (state.dado1 != null && state.dado2 != null) {
+      if (event.celdaAncla.valor == state.dado2!.valor &&
+          event.celdaAncla.valor != state.dado1!.valor) {
+        indiceAncla = 1;
+      } else if (event.celdaAncla.valor == state.dado1!.valor &&
+          event.celdaAncla.valor != state.dado2!.valor) {
+        indiceAncla = 0;
+      }
+    }
+
+    final dAncla = indiceAncla == 0 ? state.dado1 : state.dado2;
+    final dColocar = indiceAncla == 0 ? state.dado2 : state.dado1;
+
     if (dAncla != null &&
         dColocar != null &&
         event.celdaAncla.valor == dAncla.valor) {
@@ -62,6 +76,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
       emit(
         state.copyWith(
+          indiceDadoAncla: indiceAncla,
           celdaAncla: event.celdaAncla,
           celdasObjetivoValidas: validas,
         ),
@@ -86,6 +101,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           tablero: state.tablero,
           puntuacionTotal: nuevoPuntaje,
           limpiarAncla: true,
+          limpiarDados: true,
         ),
       );
     }

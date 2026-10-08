@@ -338,22 +338,21 @@ void main() {
 
   group('Pruebas del Sistema de Puntuación', () {
     test('calcula correctamente la puntuacion total acumulada del tablero', () {
-      final zonas = [
-        Zona(region: Region.azulNorte, tipo: TipoAzul()),
-        Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
-      ];
+      final zonas = [Zona(region: Region.azulNorte, tipo: TipoAzul())];
       final celdas = [
         Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
-        Celda(columna: 1, fila: 0, region: Region.verdeNoroeste, valor: 5),
       ];
       final tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
 
       final puntaje = calcularPuntuacionTotal(tablero);
-      expect(puntaje, greaterThan(0));
+      expect(
+        puntaje,
+        equals(0),
+      ); // Solo otorga puntos si el bloque está 100% completo
     });
   });
 
-  group('Pruebas de JuegoTurnoBloc', () {
+  group('Pruebas de JuegoTurnoBloc con 2 Dados', () {
     late Tablero tablero;
     late JuegoTurnoBloc bloc;
 
@@ -363,8 +362,13 @@ void main() {
         Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
       ];
       final celdas = [
-        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
-        Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: null),
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3), // Ancla
+        Celda(
+          columna: 1,
+          fila: 0,
+          region: Region.verdeNoroeste,
+          valor: null,
+        ), // Adyacente Verde (acepta cualquier número)
       ];
       tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
       bloc = JuegoTurnoBloc(tablero);
@@ -373,38 +377,23 @@ void main() {
     tearDown(() {
       bloc.close();
     });
-    group('Pruebas de JuegoTurnoBloc con 2 Dados', () {
-      late Tablero tablero;
-      late JuegoTurnoBloc bloc;
 
-      setUp(() {
-        final zonas = [
-          Zona(region: Region.azulNorte, tipo: TipoAzul()),
-          Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
-        ];
-        final celdas = [
-          Celda(
-            columna: 0,
-            fila: 0,
-            region: Region.azulNorte,
-            valor: 3,
-          ), // Ancla
-          Celda(
-            columna: 1,
-            fila: 0,
-            region: Region.azulNorte,
-            valor: null,
-          ), // Adyacente
-        ];
-        tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
-        bloc = JuegoTurnoBloc(tablero);
-      });
+    test('lanzar dados genera 2 dados en el estado', () async {
+      bloc.add(
+        EventoLanzarDados(
+          dado1Forzado: const Dado(3),
+          dado2Forzado: const Dado(5),
+        ),
+      );
+      await pumpEventQueue();
 
-      tearDown(() {
-        bloc.close();
-      });
+      expect(bloc.state.dado1, equals(const Dado(3)));
+      expect(bloc.state.dado2, equals(const Dado(5)));
+    });
 
-      test('lanzar dados genera 2 dados en el estado', () async {
+    test(
+      'seleccionar dado ancla establece los roles de ancla y colocacion',
+      () async {
         bloc.add(
           EventoLanzarDados(
             dado1Forzado: const Dado(3),
@@ -413,53 +402,65 @@ void main() {
         );
         await pumpEventQueue();
 
-        expect(bloc.state.dado1, equals(const Dado(3)));
-        expect(bloc.state.dado2, equals(const Dado(5)));
-      });
+        bloc.add(EventoSeleccionarDadoAncla(0)); // Dado 1 (valor 3) es ancla
+        await pumpEventQueue();
 
-      test(
-        'seleccionar dado ancla establece los roles de ancla y colocacion',
-        () async {
-          bloc.add(
-            EventoLanzarDados(
-              dado1Forzado: const Dado(3),
-              dado2Forzado: const Dado(5),
-            ),
-          );
-          await pumpEventQueue();
+        expect(bloc.state.dadoAncla?.valor, equals(3));
+        expect(bloc.state.dadoColocar?.valor, equals(5));
+      },
+    );
 
-          bloc.add(
-            EventoSeleccionarDadoAncla(0),
-          ); // Dado 1 (valor 3) es el ancla
-          await pumpEventQueue();
+    test(
+      'seleccionar casilla ancla valida que coincida con el dado ancla',
+      () async {
+        bloc.add(
+          EventoLanzarDados(
+            dado1Forzado: const Dado(3),
+            dado2Forzado: const Dado(5),
+          ),
+        );
+        await pumpEventQueue();
 
-          expect(bloc.state.dadoAncla?.valor, equals(3));
-          expect(bloc.state.dadoColocar?.valor, equals(5));
-        },
-      );
+        bloc.add(EventoSeleccionarDadoAncla(0));
+        await pumpEventQueue();
 
-      test(
-        'seleccionar casilla ancla valida que coincida con el dado ancla',
-        () async {
-          bloc.add(
-            EventoLanzarDados(
-              dado1Forzado: const Dado(3),
-              dado2Forzado: const Dado(5),
-            ),
-          );
-          await pumpEventQueue();
+        final celdaTres = tablero.obtenerCeldaEn(0, 0)!;
+        bloc.add(EventoSeleccionarAnclaTablero(celdaTres));
+        await pumpEventQueue();
 
-          bloc.add(EventoSeleccionarDadoAncla(0));
-          await pumpEventQueue();
+        expect(bloc.state.celdaAncla, equals(celdaTres));
+        expect(bloc.state.celdasObjetivoValidas.length, equals(1));
+      },
+    );
 
-          final celdaTres = tablero.obtenerCeldaEn(0, 0)!;
-          bloc.add(EventoSeleccionarAnclaTablero(celdaTres));
-          await pumpEventQueue();
+    test(
+      'colocar numero consume la jugada y limpia los dados del estado',
+      () async {
+        bloc.add(
+          EventoLanzarDados(
+            dado1Forzado: const Dado(3),
+            dado2Forzado: const Dado(5),
+          ),
+        );
+        await pumpEventQueue();
 
-          expect(bloc.state.celdaAncla, equals(celdaTres));
-          expect(bloc.state.celdasObjetivoValidas.length, equals(1));
-        },
-      );
-    });
+        bloc.add(EventoSeleccionarDadoAncla(0));
+        await pumpEventQueue();
+
+        final celdaTres = tablero.obtenerCeldaEn(0, 0)!;
+        bloc.add(EventoSeleccionarAnclaTablero(celdaTres));
+        await pumpEventQueue();
+
+        final objetivo = bloc.state.celdasObjetivoValidas.first;
+        bloc.add(EventoColocarNumeroEnObjetivo(objetivo));
+        await pumpEventQueue();
+
+        expect(objetivo.valor, equals(5));
+        expect(bloc.state.dado1, isNull);
+        expect(bloc.state.dado2, isNull);
+        expect(bloc.state.celdaAncla, isNull);
+        expect(bloc.state.celdasObjetivoValidas, isEmpty);
+      },
+    );
   });
 }

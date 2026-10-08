@@ -81,6 +81,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
   }
 
   Region _obtenerRegionMatrizCompleta(int col, int fila) {
+    // Esquinas Amarillas y Centro
     if ((col == 0 && fila == 0) ||
         (col == 6 && fila == 0) ||
         (col == 3 && fila == 3) ||
@@ -89,6 +90,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.amarillo;
     }
 
+    // Bloque Azul Norte
     if ((col == 2 && fila == 0) ||
         (col == 2 && fila == 1) ||
         (col == 3 && fila == 1) ||
@@ -96,6 +98,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.azulNorte;
     }
 
+    // Bloque Lila Norte
     if ((col == 3 && fila == 0) ||
         (col == 4 && fila == 0) ||
         (col == 4 && fila == 1) ||
@@ -105,13 +108,17 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.lilaNorte;
     }
 
+    // Bloque Rojo Noroeste (Bloque Izquierdo)
     if ((col == 1 && fila == 2) ||
         (col == 2 && fila == 2) ||
         (col == 1 && fila == 3) ||
-        (col == 1 && fila == 4)) {
+        (col == 1 && fila == 4) ||
+        (col == 0 && fila == 5) ||
+        (col == 1 && fila == 5)) {
       return Region.rojoNoroeste;
     }
 
+    // Bloque Lila Suroeste
     if ((col == 3 && fila == 4) ||
         (col == 2 && fila == 3) ||
         (col == 2 && fila == 4) ||
@@ -121,9 +128,8 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.lilaSuroeste;
     }
 
-    if ((col == 0 && fila == 5) ||
-        (col == 1 && fila == 5) ||
-        (col == 4 && fila == 4) ||
+    // Bloque Rojo Sureste (Bloque Derecho)
+    if ((col == 4 && fila == 4) ||
         (col == 5 && fila == 4) ||
         (col == 3 && fila == 5) ||
         (col == 4 && fila == 5) ||
@@ -132,6 +138,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.rojoSureste;
     }
 
+    // Bloque Azul Sureste
     if ((col == 6 && fila == 4) ||
         (col == 5 && fila == 5) ||
         (col == 6 && fila == 5) ||
@@ -139,6 +146,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.azulSureste;
     }
 
+    // Bloque Verde Este
     if ((col == 5 && fila == 2) ||
         (col == 5 && fila == 3) ||
         (col == 6 && fila == 1) ||
@@ -147,6 +155,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
       return Region.verdeEste;
     }
 
+    // Todo lo demás es Verde Noroeste
     return Region.verdeNoroeste;
   }
 
@@ -352,7 +361,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
   }
 }
 
-/// Pantalla Principal de Juego por Turnos (Adaptada a 2 Dados)
+/// Pantalla Principal de Juego por Turnos
 class PantallaJuegoTurno extends StatelessWidget {
   final Tablero tablero;
 
@@ -458,12 +467,10 @@ class PantallaJuegoTurno extends StatelessWidget {
                             return GestureDetector(
                               onTap: () {
                                 if (celda.valor != null) {
-                                  // Selecciona como Ancla en el tablero
                                   context.read<JuegoTurnoBloc>().add(
                                     EventoSeleccionarAnclaTablero(celda),
                                   );
                                 } else if (esObjetivoValido) {
-                                  // Coloca el Dado en la posición objetivo
                                   context.read<JuegoTurnoBloc>().add(
                                     EventoColocarNumeroEnObjetivo(celda),
                                   );
@@ -489,8 +496,8 @@ class PantallaJuegoTurno extends StatelessWidget {
                                   boxShadow: esObjetivoValido
                                       ? [
                                           BoxShadow(
-                                            color: Colors.amber.withOpacity(
-                                              0.8,
+                                            color: Colors.amber.withValues(
+                                              alpha: 0.8,
                                             ),
                                             blurRadius: 8,
                                             spreadRadius: 2,
@@ -547,7 +554,7 @@ class PantallaJuegoTurno extends StatelessWidget {
                             children: [
                               _buildChipDado(
                                 context: context,
-                                label: 'Dado 1: ${state.dado1!.valor}',
+                                valorDado: state.dado1!.valor,
                                 esAncla: state.indiceDadoAncla == 0,
                                 onTap: () => context.read<JuegoTurnoBloc>().add(
                                   EventoSeleccionarDadoAncla(0),
@@ -556,7 +563,7 @@ class PantallaJuegoTurno extends StatelessWidget {
                               const SizedBox(width: 16),
                               _buildChipDado(
                                 context: context,
-                                label: 'Dado 2: ${state.dado2!.valor}',
+                                valorDado: state.dado2!.valor,
                                 esAncla: state.indiceDadoAncla == 1,
                                 onTap: () => context.read<JuegoTurnoBloc>().add(
                                   EventoSeleccionarDadoAncla(1),
@@ -610,15 +617,16 @@ class PantallaJuegoTurno extends StatelessWidget {
 
   Widget _buildChipDado({
     required BuildContext context,
-    required String label,
+    required int valorDado,
     required bool esAncla,
     required VoidCallback onTap,
   }) {
     return ChoiceChip(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       label: Text(
-        label,
+        '$valorDado',
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
           color: esAncla ? Colors.white : Colors.black87,
         ),
