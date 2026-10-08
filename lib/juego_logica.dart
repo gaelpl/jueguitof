@@ -53,7 +53,7 @@ class TipoMorado extends Tipo {
   Map<int, int> get puntuaciones => {1: 6, 2: 4, 3: 2};
 }
 
-class TipoRojoAmarillo extends Tipo {
+class TipoRojo extends Tipo {
   @override
   Color get color => const Color(0xFFE53935);
 
@@ -67,6 +67,22 @@ class TipoRojoAmarillo extends Tipo {
 
   @override
   Map<int, int> get puntuaciones => {1: 6, 2: 4, 3: 2};
+}
+
+class TipoAmarillo extends Tipo {
+  @override
+  Color get color => const Color(0xFFFFEB3B);
+
+  @override
+  String get descripcion => 'Todos los números deben de ser diferentes';
+
+  @override
+  bool esPosibleAgregar(List<int> actuales, int posible) {
+    return !actuales.contains(posible);
+  }
+
+  @override
+  Map<int, int> get puntuaciones => {1: 8, 2: 6, 3: 4}; 
 }
 
 class TipoVerde extends Tipo {
@@ -86,7 +102,7 @@ class TipoVerde extends Tipo {
 }
 
 bool esValidoRojoAmarillo(List<int> numeros, int nuevoNumero) =>
-    TipoRojoAmarillo().esPosibleAgregar(numeros, nuevoNumero);
+    TipoRojo().esPosibleAgregar(numeros, nuevoNumero);
 
 bool esValidoVerde(List<int> numeros, int nuevoNumero) =>
     TipoVerde().esPosibleAgregar(numeros, nuevoNumero);

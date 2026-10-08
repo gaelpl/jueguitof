@@ -44,14 +44,14 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
 
   Tablero _construirTableroMapa1Completo() {
     final zonas = [
-      Zona(region: Region.amarillo, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.amarillo, tipo: TipoAmarillo()),
       Zona(region: Region.azulNorte, tipo: TipoAzul()),
       Zona(region: Region.lilaNorte, tipo: TipoMorado()),
-      Zona(region: Region.rojoNoroeste, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.rojoNoroeste, tipo: TipoRojo()),
       Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
       Zona(region: Region.verdeEste, tipo: TipoVerde()),
       Zona(region: Region.lilaSuroeste, tipo: TipoMorado()),
-      Zona(region: Region.rojoSureste, tipo: TipoRojoAmarillo()),
+      Zona(region: Region.rojoSureste, tipo: TipoRojo()),
       Zona(region: Region.azulSureste, tipo: TipoAzul()),
     ];
 
