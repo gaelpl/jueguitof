@@ -50,7 +50,7 @@ class TipoMorado extends Tipo {
   }
 
   @override
-  Map<int, int> get puntuaciones => {1: 7, 2: 5, 3: 3};
+  Map<int, int> get puntuaciones => {1: 6, 2: 4, 3: 2};
 }
 
 class TipoRojoAmarillo extends Tipo {
@@ -199,24 +199,24 @@ List<Celda> obtenerCeldasObjetivoValidas({
   return validas;
 }
 
-/// Calcula el puntaje total del tablero otorgando puntos UNICAMENTE cuando un bloque/zona se llena por completo.
+/// Calcula la puntuación total del tablero otorgando la puntuación de 1.er lugar al completar cada bloque al 100%.
 int calcularPuntuacionTotal(Tablero tablero) {
   int puntajeTotal = 0;
 
   for (var zona in tablero.mapaZonas.values) {
-    // Celdas totales pertenecientes a esta región
-    final celdasRegion = tablero.celdas
+    // Total de celdas que componen la región actual
+    final totalCeldasRegion = tablero.celdas
         .where((c) => c.region == zona.region)
-        .toList();
-    final totalCeldasRegion = celdasRegion.length;
+        .length;
 
-    // Celdas llenas con valor en esta región
-    final valores = extraerValoresDeBloque(tablero.celdas, zona.region);
+    // Celdas completadas con valor en esta región
+    final valoresRellenos = extraerValoresDeBloque(tablero.celdas, zona.region);
 
-    // Solo si el bloque está COMPLETAMENTE lleno
-    if (valores.length == totalCeldasRegion && totalCeldasRegion > 0) {
-      final puntos = zona.tipo.puntuaciones[totalCeldasRegion] ?? 0;
-      puntajeTotal += puntos;
+    // Si la región está 100% llena
+    if (valoresRellenos.length == totalCeldasRegion && totalCeldasRegion > 0) {
+      // Clave 1 representa los puntos para el 1.er lugar (en morado otorga 6 pts)
+      final puntosZona = zona.tipo.puntuaciones[1] ?? 0;
+      puntajeTotal += puntosZona;
     }
   }
 
