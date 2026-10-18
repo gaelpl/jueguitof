@@ -347,8 +347,8 @@ void main() {
       final puntaje = calcularPuntuacionTotal(tablero);
       expect(
         puntaje,
-        equals(0),
-      ); // Solo otorga puntos si el bloque está 100% completo
+        equals(7), // Para TipoAzul otorga 7 pts al completarse
+      );
     });
   });
 
