@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguitof/juego_logica.dart';
 import 'package:jueguitof/inicio_juego_bloc/inicio_juego_bloc.dart';
+import 'package:jueguitof/mapas_oficiales.dart';
 
 void main() {
   group('Regla Rojo / Amarillo (todos diferentes)', () {
@@ -498,4 +499,37 @@ group('Regla Naranja (4-6 arriba / 1-3 abajo, 6/4/3 pts)', () {
     expect(tipoArriba.puntuaciones[1], equals(6));
   });
 });
+
+group('CreadorMapas (Fabrica de Mapas 1-4)', () {
+    test('genera los 4 mapas oficiales con 49 celdas y 6 estrellas cada uno', () {
+      for (int i = 1; i <= 4; i++) {
+        final tablero = CreadorMapas.obtenerMapa(i);
+        expect(tablero.celdas.length, equals(49));
+        expect(tablero.obtenerCeldasEstrella().length, equals(6));
+      }
+    });
+    test('Mapa 4 configura adecuadamente sus 4 bloques rojos y 2 zonas naranjas', () {
+      final mapa4 = CreadorMapas.mapa4();
+
+      expect(mapa4.obtenerZona(Region.naranjaNorte), isNotNull);
+      expect(mapa4.obtenerZona(Region.naranjaSur), isNotNull);
+      expect(mapa4.obtenerZona(Region.rojoNoroeste), isNotNull);
+      expect(mapa4.obtenerZona(Region.rojoNoreste), isNotNull);
+      expect(mapa4.obtenerZona(Region.rojoSuroeste), isNotNull);
+      expect(mapa4.obtenerZona(Region.rojoSureste), isNotNull);
+    });
+  });
+
+  group('InicioJuegoBloc (Restricciones de Zona en Estrellas)', () {
+    test('bloquea la asignacion de un numero invalido en la estrella de Naranja Norte', () {
+      final tableroMapa4 = CreadorMapas.mapa4();
+      final bloc = InicioJuegoBloc(tableroMapa4);
+
+      // Intentar asignar 1 (inválido para Naranja Norte que requiere 4-6)
+      bloc.add(EventoSeleccionarNumero(1));
+      bloc.add(EventoColocarNumeroEnEstrella(5, 0));
+
+      expect(bloc.state.tablero.obtenerCeldaEn(5, 0)?.valor, isNull);
+    });
+  });
 }

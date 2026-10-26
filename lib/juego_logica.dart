@@ -166,6 +166,8 @@ bool esValidoNaranja(List<int> numeros, int nuevoNumero, {required bool esFilaSu
 enum Region {
   rojoNoroeste,
   rojoSureste,
+  rojoNoreste,  
+  rojoSuroeste,
   amarillo,
   verdeNoroeste,
   verdeEste,
@@ -173,8 +175,8 @@ enum Region {
   azulSureste,
   lilaNorte,
   lilaSuroeste,
-  blancoNorte,
-  blancoSur,
+  lilaSureste,
+  blanco,
   naranjaNorte,
   naranjaSur,
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'juego_logica.dart';
+import 'mapas_oficiales.dart';
 import 'inicio_juego_bloc/inicio_juego_bloc.dart';
 
 void main() {
@@ -34,129 +35,20 @@ class PantallaSeleccionInicial extends StatefulWidget {
 }
 
 class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
+  int mapaSeleccionado = 1;
   late Tablero tablero;
 
   @override
   void initState() {
     super.initState();
-    tablero = _construirTableroMapa1Completo();
+    tablero = CreadorMapas.obtenerMapa(mapaSeleccionado);
   }
 
-  Tablero _construirTableroMapa1Completo() {
-    final zonas = [
-      Zona(region: Region.amarillo, tipo: TipoAmarillo()),
-      Zona(region: Region.azulNorte, tipo: TipoAzul()),
-      Zona(region: Region.lilaNorte, tipo: TipoMorado()),
-      Zona(region: Region.rojoNoroeste, tipo: TipoRojo()),
-      Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
-      Zona(region: Region.verdeEste, tipo: TipoVerde()),
-      Zona(region: Region.lilaSuroeste, tipo: TipoMorado()),
-      Zona(region: Region.rojoSureste, tipo: TipoRojo()),
-      Zona(region: Region.azulSureste, tipo: TipoAzul()),
-    ];
-
-    List<Celda> celdas = [];
-    for (int fila = 0; fila < 7; fila++) {
-      for (int columna = 0; columna < 7; columna++) {
-        bool esEstrella =
-            (columna == 2 && fila == 0) ||
-            (columna == 5 && fila == 1) ||
-            (columna == 1 && fila == 3) ||
-            (columna == 4 && fila == 3) ||
-            (columna == 2 && fila == 5) ||
-            (columna == 4 && fila == 6);
-
-        Region reg = _obtenerRegionMatrizCompleta(columna, fila);
-        celdas.add(
-          Celda(
-            columna: columna,
-            fila: fila,
-            region: reg,
-            esEstrella: esEstrella,
-          ),
-        );
-      }
-    }
-    return Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
-  }
-
-  Region _obtenerRegionMatrizCompleta(int col, int fila) {
-    // Esquinas Amarillas y Centro
-    if ((col == 0 && fila == 0) ||
-        (col == 6 && fila == 0) ||
-        (col == 3 && fila == 3) ||
-        (col == 0 && fila == 6) ||
-        (col == 6 && fila == 6)) {
-      return Region.amarillo;
-    }
-
-    // Bloque Azul Norte
-    if ((col == 2 && fila == 0) ||
-        (col == 2 && fila == 1) ||
-        (col == 3 && fila == 1) ||
-        (col == 3 && fila == 2)) {
-      return Region.azulNorte;
-    }
-
-    // Bloque Lila Norte
-    if ((col == 3 && fila == 0) ||
-        (col == 4 && fila == 0) ||
-        (col == 4 && fila == 1) ||
-        (col == 4 && fila == 2) ||
-        (col == 5 && fila == 0) ||
-        (col == 5 && fila == 1)) {
-      return Region.lilaNorte;
-    }
-
-    // Bloque Rojo Noroeste (Bloque Izquierdo)
-    if ((col == 1 && fila == 2) ||
-        (col == 2 && fila == 2) ||
-        (col == 1 && fila == 3) ||
-        (col == 1 && fila == 4) ||
-        (col == 0 && fila == 5) ||
-        (col == 1 && fila == 5)) {
-      return Region.rojoNoroeste;
-    }
-
-    // Bloque Lila Suroeste
-    if ((col == 3 && fila == 4) ||
-        (col == 2 && fila == 3) ||
-        (col == 2 && fila == 4) ||
-        (col == 2 && fila == 5) ||
-        (col == 1 && fila == 6) ||
-        (col == 2 && fila == 6)) {
-      return Region.lilaSuroeste;
-    }
-
-    // Bloque Rojo Sureste (Bloque Derecho)
-    if ((col == 4 && fila == 4) ||
-        (col == 5 && fila == 4) ||
-        (col == 3 && fila == 5) ||
-        (col == 4 && fila == 5) ||
-        (col == 3 && fila == 6) ||
-        (col == 4 && fila == 6)) {
-      return Region.rojoSureste;
-    }
-
-    // Bloque Azul Sureste
-    if ((col == 6 && fila == 4) ||
-        (col == 5 && fila == 5) ||
-        (col == 6 && fila == 5) ||
-        (col == 5 && fila == 6)) {
-      return Region.azulSureste;
-    }
-
-    // Bloque Verde Este
-    if ((col == 5 && fila == 2) ||
-        (col == 5 && fila == 3) ||
-        (col == 6 && fila == 1) ||
-        (col == 6 && fila == 2) ||
-        (col == 6 && fila == 3)) {
-      return Region.verdeEste;
-    }
-
-    // Todo lo demás es Verde Noroeste
-    return Region.verdeNoroeste;
+  void _cambiarMapa(int nuevoMapa) {
+    setState(() {
+      mapaSeleccionado = nuevoMapa;
+      tablero = CreadorMapas.obtenerMapa(mapaSeleccionado);
+    });
   }
 
   Color _obtenerColorRegion(Region region) {
@@ -166,17 +58,19 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
         return const Color(0xFF2196F3);
       case Region.rojoNoroeste:
       case Region.rojoSureste:
+      case Region.rojoNoreste:
+      case Region.rojoSuroeste:
         return const Color(0xFFE53935);
       case Region.verdeNoroeste:
       case Region.verdeEste:
         return const Color(0xFF4CAF50);
       case Region.lilaNorte:
       case Region.lilaSuroeste:
+      case Region.lilaSureste:
         return const Color(0xFF9C27B0);
       case Region.amarillo:
         return const Color(0xFFFFEB3B);
-      case Region.blancoNorte:
-      case Region.blancoSur:
+      case Region.blanco:
         return const Color(0xFFECEFF1);
       case Region.naranjaNorte:
       case Region.naranjaSur:
@@ -187,6 +81,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
+      key: ValueKey(mapaSeleccionado),
       create: (_) => InicioJuegoBloc(tablero),
       child: Scaffold(
         appBar: AppBar(
@@ -207,16 +102,36 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
             return SafeArea(
               child: Column(
                 children: [
+                  // Selector de Mapa
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(4, (index) {
+                        int numMapa = index + 1;
+                        bool seleccionado = mapaSeleccionado == numMapa;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: ChoiceChip(
+                            label: Text('Mapa $numMapa'),
+                            selected: seleccionado,
+                            onSelected: (_) => _cambiarMapa(numMapa),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
                   const Padding(
                     padding: EdgeInsets.symmetric(
-                      vertical: 8.0,
+                      vertical: 4.0,
                       horizontal: 16,
                     ),
                     child: Text(
                       'Asigna los números del 1 al 6 en las casillas estrella',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -280,10 +195,16 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                                     if (celda.valor != null && celda.valor! > 0)
                                       Text(
                                         '${celda.valor}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                          color:
+                                              celda.region ==
+                                                      Region.blanco ||
+                                                  celda.region ==
+                                                      Region.amarillo
+                                              ? Colors.black
+                                              : Colors.white,
                                         ),
                                       ),
                                   ],
@@ -380,17 +301,19 @@ class PantallaJuegoTurno extends StatelessWidget {
         return const Color(0xFF2196F3);
       case Region.rojoNoroeste:
       case Region.rojoSureste:
+      case Region.rojoNoreste:
+      case Region.rojoSuroeste:
         return const Color(0xFFE53935);
       case Region.verdeNoroeste:
       case Region.verdeEste:
         return const Color(0xFF4CAF50);
       case Region.lilaNorte:
       case Region.lilaSuroeste:
+      case Region.lilaSureste:
         return const Color(0xFF9C27B0);
       case Region.amarillo:
         return const Color(0xFFFFEB3B);
-      case Region.blancoNorte:
-      case Region.blancoSur:
+      case Region.blanco:
         return const Color(0xFFECEFF1);
       case Region.naranjaNorte:
       case Region.naranjaSur:
@@ -412,7 +335,6 @@ class PantallaJuegoTurno extends StatelessWidget {
             return SafeArea(
               child: Column(
                 children: [
-                  // Marcador de Puntuación
                   Container(
                     margin: const EdgeInsets.all(12),
                     padding: const EdgeInsets.symmetric(
@@ -446,7 +368,6 @@ class PantallaJuegoTurno extends StatelessWidget {
                     ),
                   ),
 
-                  // Cuadrícula del Tablero
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -525,7 +446,12 @@ class PantallaJuegoTurno extends StatelessWidget {
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color:
-                                                celda.region == Region.amarillo
+                                                celda.region ==
+                                                        Region.amarillo ||
+                                                    celda.region ==
+                                                        Region.blanco ||
+                                                    celda.region ==
+                                                        Region.blanco
                                                 ? Colors.black
                                                 : Colors.white,
                                           ),
@@ -546,7 +472,6 @@ class PantallaJuegoTurno extends StatelessWidget {
                     ),
                   ),
 
-                  // Área de Selección de Dados y Botón de Lanzamiento
                   Container(
                     padding: const EdgeInsets.all(12.0),
                     color: Colors.grey.shade100,
@@ -596,7 +521,6 @@ class PantallaJuegoTurno extends StatelessWidget {
                           ],
                           const SizedBox(height: 10),
                         ],
-
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
