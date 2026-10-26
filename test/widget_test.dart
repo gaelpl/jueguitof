@@ -6,34 +6,53 @@ import 'package:jueguitof/juego_logica.dart';
 
 void main() {
   group('Widget Tests - Camino Feliz', () {
-    testWidgets(
-      'Renderiza la pantalla de Selección Inicial y sus componentes clave',
-      (WidgetTester tester) async {
-        // 1. Cargar la app
-        await tester.pumpWidget(const BrilliantApp());
-        await tester.pumpAndSettle();
+    testWidgets('Renderiza el menú de mapas y navega a la Selección Inicial', (
+      WidgetTester tester,
+    ) async {
+      // 1. Cargar la app
+      await tester.pumpWidget(const BrilliantApp());
+      await tester.pumpAndSettle();
 
-        // 2. Verificar títulos y mensajes iniciales
-        expect(find.text('Brilliant - Selección Inicial'), findsOneWidget);
-        expect(
-          find.text('Asigna los números del 1 al 6 en las casillas estrella'),
-          findsOneWidget,
-        );
+      // 2. Verificar el menú de mapas
+      expect(find.text('SELECCIONA UN MAPA'), findsOneWidget);
+      for (int i = 1; i <= 4; i++) {
+        expect(find.text('Mapa $i'), findsOneWidget);
+      }
 
-        // 3. Verificar que el botón INICIO está presente
-        expect(find.text('INICIO'), findsOneWidget);
+      // 3. Entrar al Mapa 1
+      await tester.tap(find.text('Mapa 1'));
+      await tester.pumpAndSettle();
 
-        // 4. Verificar que se muestran los números del 1 al 6 para seleccionar
-        for (int i = 1; i <= 6; i++) {
-          expect(find.text('$i'), findsWidgets);
-        }
-      },
-    );
+      // 4. Verificar títulos y mensajes de la selección inicial
+      expect(find.text('Brilliant - Mapa 1'), findsOneWidget);
+      expect(
+        find.text('Asigna los números del 1 al 6 en las casillas estrella'),
+        findsOneWidget,
+      );
+
+      // 5. Verificar que el botón INICIO está presente
+      expect(find.text('INICIO'), findsOneWidget);
+
+      // 6. Verificar que se muestran los números del 1 al 6 para seleccionar
+      for (int i = 1; i <= 6; i++) {
+        expect(find.text('$i'), findsWidgets);
+      }
+    });
 
     testWidgets(
       'Asigna números a las 6 estrellas y navega a la pantalla de juego',
       (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
         await tester.pumpWidget(const BrilliantApp());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mapa 1'));
         await tester.pumpAndSettle();
 
         // Buscar los iconos de estrella en la cuadrícula

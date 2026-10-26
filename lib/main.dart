@@ -21,13 +21,115 @@ class BrilliantApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const PantallaSeleccionInicial(),
+      home: const PantallaMenuMapas(),
+    );
+  }
+}
+
+class _OpcionMapa {
+  final int numero;
+  final String descripcion;
+
+  const _OpcionMapa(this.numero, this.descripcion);
+}
+
+class PantallaMenuMapas extends StatelessWidget {
+  const PantallaMenuMapas({super.key});
+
+  static const List<_OpcionMapa> _opciones = [
+    _OpcionMapa(1, 'Nivel 1'),
+    _OpcionMapa(2, 'Nivel 2'),
+    _OpcionMapa(3, 'Nivel 3'),
+    _OpcionMapa(4, 'Nivel 4'),
+  ];
+
+  void _abrirMapa(BuildContext context, int numeroMapa) {
+    final tablero = CreadorMapas.obtenerMapa(numeroMapa);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            PantallaSeleccionInicial(tablero: tablero, numeroMapa: numeroMapa),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Brilliant - Mapas'), centerTitle: true),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'SELECCIONA UN MAPA',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Elige un nivel para configurar sus estrellas y comenzar la partida.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                  const SizedBox(height: 20),
+                  for (final opcion in _opciones)
+                    Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      elevation: 1,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary,
+                          foregroundColor: Colors.white,
+                          child: Text(
+                            '${opcion.numero}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        title: Text(
+                          'Mapa ${opcion.numero}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(opcion.descripcion),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _abrirMapa(context, opcion.numero),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class PantallaSeleccionInicial extends StatefulWidget {
-  const PantallaSeleccionInicial({super.key});
+  final Tablero tablero;
+  final int numeroMapa;
+
+  const PantallaSeleccionInicial({
+    super.key,
+    required this.tablero,
+    required this.numeroMapa,
+  });
 
   @override
   State<PantallaSeleccionInicial> createState() =>
@@ -35,22 +137,6 @@ class PantallaSeleccionInicial extends StatefulWidget {
 }
 
 class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
-  int mapaSeleccionado = 1;
-  late Tablero tablero;
-
-  @override
-  void initState() {
-    super.initState();
-    tablero = CreadorMapas.obtenerMapa(mapaSeleccionado);
-  }
-
-  void _cambiarMapa(int nuevoMapa) {
-    setState(() {
-      mapaSeleccionado = nuevoMapa;
-      tablero = CreadorMapas.obtenerMapa(mapaSeleccionado);
-    });
-  }
-
   Color _obtenerColorRegion(Region region) {
     switch (region) {
       case Region.azulNorte:
@@ -81,11 +167,11 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      key: ValueKey(mapaSeleccionado),
-      create: (_) => InicioJuegoBloc(tablero),
+      key: ValueKey(widget.numeroMapa),
+      create: (_) => InicioJuegoBloc(widget.tablero),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Brilliant - Selección Inicial'),
+          title: Text('Brilliant - Mapa ${widget.numeroMapa}'),
           centerTitle: true,
         ),
         body: BlocConsumer<InicioJuegoBloc, InicioJuegoEstado>(
@@ -100,185 +186,180 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
           },
           builder: (context, state) {
             return SafeArea(
-              child: Column(
-                children: [
-                  // Selector de Mapa
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(4, (index) {
-                        int numMapa = index + 1;
-                        bool seleccionado = mapaSeleccionado == numMapa;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: ChoiceChip(
-                            label: Text('Mapa $numMapa'),
-                            selected: seleccionado,
-                            onSelected: (_) => _cambiarMapa(numMapa),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 4.0,
-                      horizontal: 16,
-                    ),
-                    child: Text(
-                      'Asigna los números del 1 al 6 en las casillas estrella',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: GridView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 7,
-                                crossAxisSpacing: 3,
-                                mainAxisSpacing: 3,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 4.0,
+                              horizontal: 16,
+                            ),
+                            child: Text(
+                              'Asigna los números del 1 al 6 en las casillas estrella',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
-                          itemCount: 49,
-                          itemBuilder: (context, index) {
-                            int col = index % 7;
-                            int fila = index ~/ 7;
-                            final celda = state.tablero.obtenerCeldaEn(
-                              col,
-                              fila,
-                            );
-
-                            if (celda == null) return const SizedBox();
-
-                            return GestureDetector(
-                              onTap: celda.esEstrella
-                                  ? () {
-                                      context.read<InicioJuegoBloc>().add(
-                                        EventoColocarNumeroEnEstrella(
-                                          col,
-                                          fila,
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: _obtenerColorRegion(celda.region),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: celda.esEstrella
-                                        ? Colors.black
-                                        : Colors.white30,
-                                    width: celda.esEstrella ? 2.5 : 1,
-                                  ),
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (celda.esEstrella && celda.valor == null)
-                                      const Icon(
-                                        Icons.star,
-                                        color: Colors.black87,
-                                        size: 22,
-                                      ),
-                                    if (celda.valor != null && celda.valor! > 0)
-                                      Text(
-                                        '${celda.valor}',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              celda.region ==
-                                                      Region.blanco ||
-                                                  celda.region ==
-                                                      Region.amarillo
-                                              ? Colors.black
-                                              : Colors.white,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    color: Colors.grey[100],
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(6, (i) {
-                        int num = i + 1;
-                        bool seleccionado = state.numeroSeleccionado == num;
-                        return ChoiceChip(
-                          label: Text(
-                            '$num',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: seleccionado ? Colors.white : Colors.black,
                             ),
                           ),
-                          selected: seleccionado,
-                          selectedColor: Theme.of(context).colorScheme.primary,
-                          onSelected: (_) {
-                            context.read<InicioJuegoBloc>().add(
-                              EventoSeleccionarNumero(num),
-                            );
-                          },
-                        );
-                      }),
-                    ),
-                  ),
 
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: state.estanListasEstrellas
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[400],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: state.estanListasEstrellas
-                            ? () {
-                                context.read<InicioJuegoBloc>().add(
-                                  EventoConfirmarInicio(),
+                          const SizedBox(height: 8),
+                          AspectRatio(
+                            aspectRatio: 1,
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 7,
+                                    crossAxisSpacing: 3,
+                                    mainAxisSpacing: 3,
+                                  ),
+                              itemCount: 49,
+                              itemBuilder: (context, index) {
+                                int col = index % 7;
+                                int fila = index ~/ 7;
+                                final celda = state.tablero.obtenerCeldaEn(
+                                  col,
+                                  fila,
                                 );
-                              }
-                            : null,
-                        child: const Text(
-                          'INICIO',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+
+                                if (celda == null) return const SizedBox();
+
+                                return GestureDetector(
+                                  onTap: celda.esEstrella
+                                      ? () {
+                                          context.read<InicioJuegoBloc>().add(
+                                            EventoColocarNumeroEnEstrella(
+                                              col,
+                                              fila,
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _obtenerColorRegion(celda.region),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: celda.esEstrella
+                                            ? Colors.black
+                                            : Colors.white30,
+                                        width: celda.esEstrella ? 2.5 : 1,
+                                      ),
+                                    ),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        if (celda.esEstrella &&
+                                            celda.valor == null)
+                                          const Icon(
+                                            Icons.star,
+                                            color: Colors.black87,
+                                            size: 22,
+                                          ),
+                                        if (celda.valor != null &&
+                                            celda.valor! > 0)
+                                          Text(
+                                            '${celda.valor}',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  celda.region ==
+                                                          Region.blanco ||
+                                                      celda.region ==
+                                                          Region.amarillo
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey[100],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: List.generate(6, (i) {
+                                int num = i + 1;
+                                bool seleccionado =
+                                    state.numeroSeleccionado == num;
+                                return ChoiceChip(
+                                  label: Text(
+                                    '$num',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: seleccionado
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  selected: seleccionado,
+                                  selectedColor: Theme.of(context)
+                                      .colorScheme
+                                      .primary,
+                                  onSelected: (_) {
+                                    context.read<InicioJuegoBloc>().add(
+                                      EventoSeleccionarNumero(num),
+                                    );
+                                  },
+                                );
+                              }),
+                            ),
+                          ),
+
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: state.estanListasEstrellas
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.grey[400],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: state.estanListasEstrellas
+                                    ? () {
+                                        context.read<InicioJuegoBloc>().add(
+                                          EventoConfirmarInicio(),
+                                        );
+                                      }
+                                    : null,
+                                child: const Text(
+                                  'INICIO',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             );
           },
