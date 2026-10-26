@@ -82,7 +82,7 @@ class TipoAmarillo extends Tipo {
   }
 
   @override
-  Map<int, int> get puntuaciones => {1: 8, 2: 6, 3: 4}; 
+  Map<int, int> get puntuaciones => {1: 8, 2: 6, 3: 4};
 }
 
 class TipoVerde extends Tipo {
@@ -101,6 +101,50 @@ class TipoVerde extends Tipo {
   Map<int, int> get puntuaciones => {1: 4, 2: 3, 3: 2};
 }
 
+class TipoBlanco extends Tipo {
+  @override
+  Color get color => const Color(0xFFECEFF1);
+
+  @override
+  String get descripcion => 'Todos los números deben de ser iguales';
+
+  @override
+  bool esPosibleAgregar(List<int> actuales, int posible) {
+    return actuales.isEmpty ||
+        actuales.every((elemento) => elemento == posible);
+  }
+
+  @override
+  Map<int, int> get puntuaciones => {1: 8, 2: 6, 3: 4};
+}
+
+// 3. Clase TipoNaranja (regla 4-6 arriba / 1-3 abajo, puntuación 6, 4, 3)
+class TipoNaranja extends Tipo {
+  final bool esFilaSuperior;
+
+  TipoNaranja({required this.esFilaSuperior});
+
+  @override
+  Color get color => const Color(0xFFFF9800);
+
+  @override
+  String get descripcion => esFilaSuperior
+      ? 'Solo se permiten números del 4 al 6'
+      : 'Solo se permiten números del 1 al 3';
+
+  @override
+  bool esPosibleAgregar(List<int> actuales, int posible) {
+    if (esFilaSuperior) {
+      return posible >= 4 && posible <= 6;
+    } else {
+      return posible >= 1 && posible <= 3;
+    }
+  }
+
+  @override
+  Map<int, int> get puntuaciones => {1: 6, 2: 4, 3: 3};
+}
+
 bool esValidoRojoAmarillo(List<int> numeros, int nuevoNumero) =>
     TipoRojo().esPosibleAgregar(numeros, nuevoNumero);
 
@@ -113,6 +157,12 @@ bool esValidoAzul(List<int> numeros, int nuevoNumero) =>
 bool esValidoLila(List<int> numeros, int nuevoNumero) =>
     TipoMorado().esPosibleAgregar(numeros, nuevoNumero);
 
+bool esValidoBlanco(List<int> numeros, int nuevoNumero) =>
+    TipoBlanco().esPosibleAgregar(numeros, nuevoNumero);
+
+bool esValidoNaranja(List<int> numeros, int nuevoNumero, {required bool esFilaSuperior}) =>
+    TipoNaranja(esFilaSuperior: esFilaSuperior).esPosibleAgregar(numeros, nuevoNumero);    
+
 enum Region {
   rojoNoroeste,
   rojoSureste,
@@ -123,6 +173,10 @@ enum Region {
   azulSureste,
   lilaNorte,
   lilaSuroeste,
+  blancoNorte,
+  blancoSur,
+  naranjaNorte,
+  naranjaSur,
 }
 
 class Zona {

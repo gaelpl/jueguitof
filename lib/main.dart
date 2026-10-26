@@ -175,6 +175,12 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
         return const Color(0xFF9C27B0);
       case Region.amarillo:
         return const Color(0xFFFFEB3B);
+      case Region.blancoNorte:
+      case Region.blancoSur:
+        return const Color(0xFFECEFF1);
+      case Region.naranjaNorte:
+      case Region.naranjaSur:
+        return const Color(0xFFFF9800);
     }
   }
 
@@ -383,6 +389,12 @@ class PantallaJuegoTurno extends StatelessWidget {
         return const Color(0xFF9C27B0);
       case Region.amarillo:
         return const Color(0xFFFFEB3B);
+      case Region.blancoNorte:
+      case Region.blancoSur:
+        return const Color(0xFFECEFF1);
+      case Region.naranjaNorte:
+      case Region.naranjaSur:
+        return const Color(0xFFFF9800);
     }
   }
 

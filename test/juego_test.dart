@@ -463,4 +463,39 @@ void main() {
       },
     );
   });
+
+  group('Regla Blanco (todos idénticos, 8/6/4 pts)', () {
+  final tipo = TipoBlanco();
+
+  test('permite colocar si la lista está vacía o si el número es idéntico', () {
+    expect(tipo.esPosibleAgregar([], 5), isTrue);
+    expect(tipo.esPosibleAgregar([5, 5], 5), isTrue);
+    expect(tipo.esPosibleAgregar([5, 5], 3), isFalse);
+  });
+
+  test('puntuación otorga 8 pts al completar 1.er lugar', () {
+    expect(tipo.puntuaciones[1], equals(8));
+  });
+});
+
+group('Regla Naranja (4-6 arriba / 1-3 abajo, 6/4/3 pts)', () {
+  final tipoArriba = TipoNaranja(esFilaSuperior: true);
+  final tipoAbajo = TipoNaranja(esFilaSuperior: false);
+
+  test('fila superior solo permite 4, 5 y 6', () {
+    expect(tipoArriba.esPosibleAgregar([], 4), isTrue);
+    expect(tipoArriba.esPosibleAgregar([], 6), isTrue);
+    expect(tipoArriba.esPosibleAgregar([], 3), isFalse);
+  });
+
+  test('fila inferior solo permite 1, 2 y 3', () {
+    expect(tipoAbajo.esPosibleAgregar([], 1), isTrue);
+    expect(tipoAbajo.esPosibleAgregar([], 3), isTrue);
+    expect(tipoAbajo.esPosibleAgregar([], 4), isFalse);
+  });
+
+  test('puntuación otorga 6 pts al completar 1.er lugar', () {
+    expect(tipoArriba.puntuaciones[1], equals(6));
+  });
+});
 }
