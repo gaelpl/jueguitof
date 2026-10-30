@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../servicios/servicio_autenticacion.dart';
+
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
 
@@ -8,16 +10,17 @@ class PantallaLogin extends StatefulWidget {
 }
 
 class _PantallaLoginState extends State<PantallaLogin> {
-  // Controladores para los campos de texto con nombres en español
   final TextEditingController _correoControlador = TextEditingController();
   final TextEditingController _contrasenaControlador = TextEditingController();
+  final ServicioAutenticacion _servicioAutenticacion = ServicioAutenticacion();
 
-  // Función simulada para manejar el evento de presionar el botón de inicio de sesión
-  void _manejarEnvioFormulario() {
+  bool _estaCargando = false;
+
+  // Función para manejar el envío del formulario y conectar con el backend
+  Future<void> _manejarEnvioFormulario() async {
     final String correo = _correoControlador.text.trim();
     final String contrasena = _contrasenaControlador.text.trim();
 
-    // Validaciones básicas locales
     if (correo.isEmpty || contrasena.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, completa todos los campos.')),
@@ -25,8 +28,30 @@ class _PantallaLoginState extends State<PantallaLogin> {
       return;
     }
 
-    // Aquí integraremos la llamada HTTP al backend en los siguientes commits
-    print('Intentando iniciar sesión con el correo: $correo');
+    setState(() {
+      _estaCargando = true;
+    });
+
+    // Llamada al servicio HTTP
+    final resultado = await _servicioAutenticacion.iniciarSesion(
+      correo,
+      contrasena,
+    );
+
+    setState(() {
+      _estaCargando = false;
+    });
+
+    if (!mounted) return;
+
+    // Mostrar retroalimentación al usuario
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(resultado['mensaje'])));
+
+    if (resultado['exito']) {
+      // Aquí puedes navegar a la pantalla principal de tu juego más adelante
+      print('Token guardado exitosamente. ¡Listo para jugar!');
+    }
   }
 
   @override
@@ -57,7 +82,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Campo de texto para el Correo
                 TextField(
                   controller: _correoControlador,
@@ -82,17 +107,19 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 ),
                 const SizedBox(height: 24),
 
-                // Botón de Envío
-                ElevatedButton(
-                  onPressed: _manejarEnvioFormulario,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'Entrar',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
+                // Botón de Envío o Indicador de Carga
+                _estaCargando
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _manejarEnvioFormulario,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text(
+                          'Entrar',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
               ],
             ),
           ),
