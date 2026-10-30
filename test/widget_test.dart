@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:jueguitof/main.dart';
-import 'package:jueguitof/juego_logica.dart';
+import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_juego_turno.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 
 void main() {
   group('Widget Tests - Camino Feliz', () {
@@ -10,7 +11,7 @@ void main() {
       WidgetTester tester,
     ) async {
       // 1. Cargar la app
-      await tester.pumpWidget(const BrilliantApp());
+      await tester.pumpWidget(const MaterialApp(home: PantallaMenuMapas()));
       await tester.pumpAndSettle();
 
       // 2. Verificar el menú de mapas
@@ -49,7 +50,7 @@ void main() {
           tester.view.resetDevicePixelRatio();
         });
 
-        await tester.pumpWidget(const BrilliantApp());
+        await tester.pumpWidget(const MaterialApp(home: PantallaMenuMapas()));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Mapa 1'));

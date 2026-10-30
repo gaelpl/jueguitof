@@ -1,4 +1,4 @@
-import 'juego_logica.dart';
+import '../dominio/logica/juego_logica.dart';
 
 class CreadorMapas {
   /// Retorna la instancia del tablero según el número de mapa seleccionado (1, 2, 3 o 4)

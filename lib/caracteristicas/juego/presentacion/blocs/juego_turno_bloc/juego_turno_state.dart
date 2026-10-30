@@ -1,4 +1,4 @@
-import '../juego_logica.dart';
+import '../../../dominio/logica/juego_logica.dart';
 
 class JuegoTurnoEstado {
   final Tablero tablero;

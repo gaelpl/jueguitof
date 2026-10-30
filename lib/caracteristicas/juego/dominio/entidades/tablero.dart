@@ -1,4 +1,4 @@
-import 'juego_logica.dart';
+import '../logica/juego_logica.dart';
 
 class Punto2D {
   final int x;
@@ -6,12 +6,12 @@ class Punto2D {
   const Punto2D(this.x, this.y);
 
   @override
-  bool operator ==(Object otro) =>
-      identical(this, otro) ||
-      otro is Punto2D &&
-          runtimeType == otro.runtimeType &&
-          x == otro.x &&
-          y == otro.y;
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Punto2D &&
+          runtimeType == other.runtimeType &&
+          x == other.x &&
+          y == other.y;
 
   @override
   int get hashCode => x.hashCode ^ y.hashCode;

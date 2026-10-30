@@ -1,5 +1,3 @@
-import '../juego_logica.dart';
-
 abstract class InicioJuegoEvento {}
 
 class EventoSeleccionarNumero extends InicioJuegoEvento {

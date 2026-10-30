@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../servicios/servicio_autenticacion.dart';
+import '../../datos/servicios/servicio_autenticacion.dart';
+import '../../../juego/presentacion/pantallas/pantalla_menu_mapas.dart';
+import 'pantalla_registro.dart';
 
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
@@ -16,7 +18,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
   bool _estaCargando = false;
 
-  // Función para manejar el envío del formulario y conectar con el backend
   Future<void> _manejarEnvioFormulario() async {
     final String correo = _correoControlador.text.trim();
     final String contrasena = _contrasenaControlador.text.trim();
@@ -32,7 +33,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
       _estaCargando = true;
     });
 
-    // Llamada al servicio HTTP
     final resultado = await _servicioAutenticacion.iniciarSesion(
       correo,
       contrasena,
@@ -44,13 +44,14 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
     if (!mounted) return;
 
-    // Mostrar retroalimentación al usuario
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(resultado['mensaje'])));
 
     if (resultado['exito']) {
-      // Aquí puedes navegar a la pantalla principal de tu juego más adelante
-      print('Token guardado exitosamente. ¡Listo para jugar!');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PantallaMenuMapas()),
+      );
     }
   }
 
@@ -82,8 +83,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-
-                // Campo de texto para el Correo
                 TextField(
                   controller: _correoControlador,
                   keyboardType: TextInputType.emailAddress,
@@ -94,8 +93,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Campo de texto para la Contraseña
                 TextField(
                   controller: _contrasenaControlador,
                   obscureText: true,
@@ -106,8 +103,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Botón de Envío o Indicador de Carga
                 _estaCargando
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton(
@@ -120,6 +115,18 @@ class _PantallaLoginState extends State<PantallaLogin> {
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PantallaRegistro(),
+                      ),
+                    );
+                  },
+                  child: const Text('¿No tienes cuenta? Regístrate aquí'),
+                ),
               ],
             ),
           ),

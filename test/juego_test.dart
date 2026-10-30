@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jueguitof/juego_logica.dart';
-import 'package:jueguitof/inicio_juego_bloc/inicio_juego_bloc.dart';
-import 'package:jueguitof/mapas_oficiales.dart';
+import 'package:jueguitof/caracteristicas/juego/datos/mapas_oficiales.dart';
+import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_bloc.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_turno_bloc/juego_turno_bloc.dart';
 
 void main() {
   group('Regla Rojo / Amarillo (todos diferentes)', () {

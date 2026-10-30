@@ -1,11 +1,9 @@
 import 'dart:ui';
 
-import 'tablero.dart';
+import '../entidades/tablero.dart';
 
-export 'tablero.dart';
-export 'juego_bloc.dart';
-export 'dado.dart';
-export 'juego_turno_bloc/juego_turno_bloc.dart';
+export '../entidades/tablero.dart';
+export '../entidades/dado.dart';
 
 int calcular() {
   return 6 * 7;

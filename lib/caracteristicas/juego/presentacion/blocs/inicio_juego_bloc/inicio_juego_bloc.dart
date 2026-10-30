@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../juego_logica.dart';
+import '../../../dominio/logica/juego_logica.dart';
 import 'inicio_juego_event.dart';
 import 'inicio_juego_state.dart';
 
@@ -17,8 +17,6 @@ class InicioJuegoBloc extends Bloc<InicioJuegoEvento, InicioJuegoEstado> {
     on<EventoColocarNumeroEnEstrella>((event, emit) {
       final valorAColocar = state.numeroSeleccionado;
       final tablero = state.tablero;
-
-      if (valorAColocar == null) return;
 
       final celdaObjetivo = tablero.obtenerCeldaEn(event.columna, event.fila);
       if (celdaObjetivo == null || !celdaObjetivo.esEstrella) return;

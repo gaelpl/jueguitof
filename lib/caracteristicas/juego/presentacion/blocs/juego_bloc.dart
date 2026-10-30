@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'juego_logica.dart';
+import '../../dominio/logica/juego_logica.dart';
 
 abstract class JuegoEstado {}
 

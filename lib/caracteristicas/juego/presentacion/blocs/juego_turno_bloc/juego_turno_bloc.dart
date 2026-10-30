@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../juego_logica.dart';
+import '../../../dominio/logica/juego_logica.dart';
 import 'juego_turno_event.dart';
 import 'juego_turno_state.dart';
 
