@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../datos/servicios/servicio_autenticacion.dart';
 import '../../../juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 
 class PantallaRegistro extends StatefulWidget {
@@ -11,9 +13,13 @@ class PantallaRegistro extends StatefulWidget {
 class _PantallaRegistroState extends State<PantallaRegistro> {
   final TextEditingController _correoControlador = TextEditingController();
   final TextEditingController _contrasenaControlador = TextEditingController();
-  final TextEditingController _confirmarContrasenaControlador = TextEditingController();
+  final TextEditingController _confirmarContrasenaControlador =
+      TextEditingController();
+  final ServicioAutenticacion _servicioAutenticacion = ServicioAutenticacion();
 
-  void _manejarRegistro() {
+  bool _estaCargando = false;
+
+  Future<void> _manejarRegistro() async {
     final String correo = _correoControlador.text.trim();
     final String contrasena = _contrasenaControlador.text.trim();
     final String confirmar = _confirmarContrasenaControlador.text.trim();
@@ -32,11 +38,32 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
       return;
     }
 
-    // Navegación simulada al menú de mapas
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const PantallaMenuMapas()),
+    setState(() {
+      _estaCargando = true;
+    });
+
+    final resultado = await _servicioAutenticacion.registrarUsuario(
+      correo,
+      contrasena,
     );
+
+    setState(() {
+      _estaCargando = false;
+    });
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(resultado['mensaje'])));
+
+    if (resultado['exito']) {
+      // Si el registro es exitoso, redirigimos al menú principal de mapas
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const PantallaMenuMapas()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -50,9 +77,7 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear Cuenta - Jueguitof'),
-      ),
+      appBar: AppBar(title: const Text('Crear Cuenta - Jueguitof')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Center(
@@ -97,13 +122,18 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _manejarRegistro,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text('Registrarse', style: TextStyle(fontSize: 16)),
-                ),
+                _estaCargando
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _manejarRegistro,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text(
+                          'Registrarse',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
               ],
             ),
           ),
