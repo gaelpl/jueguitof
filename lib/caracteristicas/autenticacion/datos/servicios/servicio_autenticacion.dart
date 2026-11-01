@@ -83,6 +83,48 @@ class ServicioAutenticacion {
     }
   }
 
+    Future<Map<String, dynamic>> eliminarCuenta() async {
+    try {
+      final String? token = await obtenerTokenLocal();
+      if (token == null) {
+        return {
+          'exito': false,
+          'mensaje': 'No hay una sesión activa.',
+        };
+      }
+
+      final respuesta = await http.delete(
+        Uri.parse('$_urlBase/usuario'), // Ajusta la ruta si en tu Node.js es diferente (ej. /cuenta o /eliminar)
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final datosRespuesta = jsonDecode(respuesta.body);
+
+      if (respuesta.statusCode == 200) {
+        // Limpiamos el token local tras borrar la cuenta exitosamente
+        await cerrarSesion();
+
+        return {
+          'exito': true,
+          'mensaje': datosRespuesta['mensaje'] ?? 'Cuenta eliminada correctamente',
+        };
+      } else {
+        return {
+          'exito': false,
+          'mensaje': datosRespuesta['mensaje'] ?? 'Error al eliminar la cuenta',
+        };
+      }
+    } catch (error) {
+      return {
+        'exito': false,
+        'mensaje': 'No se pudo conectar con el servidor. Verifica tu conexión.',
+      };
+    }
+  }
+
   // Método privado para guardar el token con SharedPreferences
   Future<void> _guardarTokenLocal(String token) async {
     final SharedPreferences preferencias = await SharedPreferences.getInstance();

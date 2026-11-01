@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
+import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/mapas_oficiales.dart';
 import 'pantalla_seleccion_inicial.dart';
 
@@ -31,6 +33,8 @@ class PantallaMenuMapas extends StatelessWidget {
   }
 
   void _confirmarCerrarSesion(BuildContext context) {
+    final ServicioAutenticacion servicioAuth = ServicioAutenticacion();
+
     showDialog(
       context: context,
       builder: (contextoDialogo) => AlertDialog(
@@ -42,11 +46,19 @@ class PantallaMenuMapas extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(contextoDialogo);
-              // Integración real con SharedPreferences en el Commit 14
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sesión cerrada correctamente')),
+
+              // Limpiamos los datos locales (token)
+              await servicioAuth.cerrarSesion();
+
+              if (!context.mounted) return;
+
+              // Redirigimos al Login eliminando el historial de pantallas
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const PantallaLogin()),
+                (route) => false,
               );
             },
             child: const Text('Aceptar'),
@@ -57,6 +69,8 @@ class PantallaMenuMapas extends StatelessWidget {
   }
 
   void _confirmarBorrarCuenta(BuildContext context) {
+    final ServicioAutenticacion servicioAuth = ServicioAutenticacion();
+
     showDialog(
       context: context,
       builder: (contextoDialogo) => AlertDialog(
@@ -74,12 +88,27 @@ class PantallaMenuMapas extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(contextoDialogo);
-              // Integración HTTP DELETE en el Commit 14
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cuenta eliminada con éxito')),
-              );
+
+              // Llamada al servidor para eliminar la cuenta y limpiar token local
+              final resultado = await servicioAuth.eliminarCuenta();
+
+              if (!context.mounted) return;
+
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(resultado['mensaje'])));
+
+              if (resultado['exito']) {
+                // Redirigimos al Login eliminando el historial
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PantallaLogin(),
+                  ),
+                  (route) => false,
+                );
+              }
             },
             child: const Text('Sí, borrar cuenta'),
           ),
