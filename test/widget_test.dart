@@ -15,7 +15,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 2. Verificar el menú de mapas
-      expect(find.text('SELECCIONA UN MAPA'), findsOneWidget);
+      expect(find.text('Selecciona un mapa'), findsOneWidget);
       for (int i = 1; i <= 4; i++) {
         expect(find.text('Mapa $i'), findsOneWidget);
       }

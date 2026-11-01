@@ -3,18 +3,18 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ServicioAutenticacion {
-  // Nota: Si usas el emulador de Android, usa 'http://10.0.2.2:3000'. 
-  // Si pruebas en Windows/Web o dispositivo físico en la misma red, usa la IP de tu PC o 'http://localhost:3000'.
-  static const String _urlBase = 'http://10.0.2.2:3000';
+  // Nota: Para Flutter Web y escritorio usa 'http://localhost:3000'.
+  // Si usas el emulador de Android, cambia el valor a 'http://10.0.2.2:3000'.
+  static const String _urlBase = 'http://localhost:3000';
 
   // Método para iniciar sesión (/login)
-  Future<Map<String, dynamic>> iniciarSesion(String correo, String contrasena) async {
+  Future<Map<String, dynamic>> iniciarSesion(String usuario, String contrasena) async {
     try {
       final respuesta = await http.post(
         Uri.parse('$_urlBase/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'correo': correo,
+          'usuario': usuario,
           'contrasena': contrasena,
         }),
       );
@@ -45,13 +45,13 @@ class ServicioAutenticacion {
   }
 
   // Método para registrar un nuevo usuario (/register)
-  Future<Map<String, dynamic>> registrarUsuario(String correo, String contrasena) async {
+  Future<Map<String, dynamic>> registrarUsuario(String usuario, String contrasena) async {
     try {
       final respuesta = await http.post(
         Uri.parse('$_urlBase/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'correo': correo,
+          'usuario': usuario,
           'contrasena': contrasena,
         }),
       );
@@ -94,7 +94,7 @@ class ServicioAutenticacion {
       }
 
       final respuesta = await http.delete(
-        Uri.parse('$_urlBase/usuario'), // Ajusta la ruta si en tu Node.js es diferente (ej. /cuenta o /eliminar)
+        Uri.parse('$_urlBase/account'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
