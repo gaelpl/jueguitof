@@ -7,8 +7,8 @@ class ServicioAutenticacion {
   // Si pruebas en Windows/Web o dispositivo físico en la misma red, usa la IP de tu PC o 'http://localhost:3000'.
   static const String _urlBase = 'http://10.0.2.2:3000';
 
-  // Método para iniciar sesión
-Future<Map<String, dynamic>> iniciarSesion(String correo, String contrasena) async {
+  // Método para iniciar sesión (/login)
+  Future<Map<String, dynamic>> iniciarSesion(String correo, String contrasena) async {
     try {
       final respuesta = await http.post(
         Uri.parse('$_urlBase/login'),
@@ -34,6 +34,45 @@ Future<Map<String, dynamic>> iniciarSesion(String correo, String contrasena) asy
         return {
           'exito': false,
           'mensaje': datosRespuesta['mensaje'] ?? 'Error al iniciar sesión',
+        };
+      }
+    } catch (error) {
+      return {
+        'exito': false,
+        'mensaje': 'No se pudo conectar con el servidor. Verifica tu conexión.',
+      };
+    }
+  }
+
+  // Método para registrar un nuevo usuario (/register)
+  Future<Map<String, dynamic>> registrarUsuario(String correo, String contrasena) async {
+    try {
+      final respuesta = await http.post(
+        Uri.parse('$_urlBase/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'correo': correo,
+          'contrasena': contrasena,
+        }),
+      );
+
+      final datosRespuesta = jsonDecode(respuesta.body);
+
+      // Los códigos comunes de éxito al crear recursos son 200 o 201
+      if (respuesta.statusCode == 200 || respuesta.statusCode == 201) {
+        // Si el backend devuelve un token automáticamente al registrarse, lo guardamos
+        if (datosRespuesta['token'] != null) {
+          await _guardarTokenLocal(datosRespuesta['token']);
+        }
+
+        return {
+          'exito': true,
+          'mensaje': datosRespuesta['mensaje'] ?? 'Registro exitoso',
+        };
+      } else {
+        return {
+          'exito': false,
+          'mensaje': datosRespuesta['mensaje'] ?? 'Error al registrar usuario',
         };
       }
     } catch (error) {
