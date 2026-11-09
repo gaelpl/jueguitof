@@ -22,8 +22,7 @@ class InicioJuegoEstado {
     return InicioJuegoEstado(
       tablero: tablero ?? this.tablero,
       numeroSeleccionado: numeroSeleccionado ?? this.numeroSeleccionado,
-      estanListasEstrellas:
-          estanListasEstrellas ?? this.estanListasEstrellas,
+      estanListasEstrellas: estanListasEstrellas ?? this.estanListasEstrellas,
       juegoIniciado: juegoIniciado ?? this.juegoIniciado,
     );
   }

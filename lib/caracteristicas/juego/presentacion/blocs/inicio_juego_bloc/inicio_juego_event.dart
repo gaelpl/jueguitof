@@ -12,3 +12,7 @@ class EventoColocarNumeroEnEstrella extends InicioJuegoEvento {
 }
 
 class EventoConfirmarInicio extends InicioJuegoEvento {}
+
+class EventoLlenarEstrellasAleatorio extends InicioJuegoEvento {}
+
+class EventoLimpiarEstrellas extends InicioJuegoEvento {}

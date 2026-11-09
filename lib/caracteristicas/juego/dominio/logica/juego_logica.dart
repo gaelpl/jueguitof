@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import '../entidades/tablero.dart';
@@ -223,6 +224,81 @@ List<int> extraerValoresDeBloque(List<Celda> tablero, Region region) {
       .where((celda) => celda.region == region && celda.valor != null)
       .map((celda) => celda.valor!)
       .toList();
+}
+
+void limpiarEstrellas(Tablero tablero) {
+  for (final celda in tablero.obtenerCeldasEstrella()) {
+    celda.asignarValor(null);
+  }
+}
+
+bool asignarEstrellasAleatorias(Tablero tablero, {Random? generador}) {
+  final estrellas = tablero.obtenerCeldasEstrella();
+  if (estrellas.length != 6) return false;
+
+  limpiarEstrellas(tablero);
+
+  final random = generador ?? Random();
+  final disponibles = <int>{1, 2, 3, 4, 5, 6};
+  final exito = _asignarEstrellasRecursivo(
+    tablero,
+    estrellas,
+    disponibles,
+    0,
+    random,
+  );
+
+  if (!exito) {
+    limpiarEstrellas(tablero);
+  }
+
+  return exito;
+}
+
+bool _asignarEstrellasRecursivo(
+  Tablero tablero,
+  List<Celda> estrellas,
+  Set<int> disponibles,
+  int indice,
+  Random random,
+) {
+  if (indice == estrellas.length) return true;
+
+  final celda = estrellas[indice];
+  final zona = tablero.obtenerZona(celda.region);
+  final candidatos = disponibles.toList()..shuffle(random);
+
+  for (final valor in candidatos) {
+    if (zona != null) {
+      final valoresActuales = estrellas
+          .where((otra) => otra != celda && otra.region == celda.region)
+          .map((otra) => otra.valor)
+          .whereType<int>()
+          .toList();
+
+      if (!zona.tipo.esPosibleAgregar(valoresActuales, valor)) {
+        continue;
+      }
+    }
+
+    celda.asignarValor(valor);
+    disponibles.remove(valor);
+
+    if (_asignarEstrellasRecursivo(
+      tablero,
+      estrellas,
+      disponibles,
+      indice + 1,
+      random,
+    )) {
+      return true;
+    }
+
+    disponibles.add(valor);
+    celda.asignarValor(null);
+  }
+
+  return false;
 }
 
 /// Obtiene las celdas adyacentes ortogonales (arriba, abajo, izquierda, derecha) de una celda ancla.

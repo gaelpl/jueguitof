@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguitof/caracteristicas/juego/datos/mapas_oficiales.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
@@ -639,6 +641,80 @@ void main() {
       bloc.add(EventoColocarNumeroEnEstrella(5, 0));
 
       expect(bloc.state.tablero.obtenerCeldaEn(5, 0)?.valor, isNull);
+    });
+  });
+
+  group('Llenado aleatorio y limpieza de estrellas', () {
+    test('asigna los números del 1 al 6 respetando las reglas de zona', () {
+      final tablero = CreadorMapas.mapa4();
+
+      final exito = asignarEstrellasAleatorias(tablero, generador: Random(7));
+
+      expect(exito, isTrue);
+      expect(tablero.estanEstrellasCompletas(), isTrue);
+
+      final estrellas = tablero.obtenerCeldasEstrella();
+      final valores = estrellas
+          .map((estrella) => estrella.valor)
+          .whereType<int>()
+          .toList();
+
+      expect(valores.toSet(), equals({1, 2, 3, 4, 5, 6}));
+
+      for (final estrella in estrellas) {
+        final zona = tablero.obtenerZona(estrella.region);
+        expect(zona, isNotNull);
+
+        final valoresDeLaZona = estrellas
+            .where((otra) => otra != estrella && otra.region == estrella.region)
+            .map((otra) => otra.valor)
+            .whereType<int>()
+            .toList();
+
+        expect(
+          zona!.tipo.esPosibleAgregar(valoresDeLaZona, estrella.valor!),
+          isTrue,
+        );
+      }
+    });
+
+    test('limpiarEstrellas deja todas las estrellas vacías', () {
+      final tablero = CreadorMapas.mapa1();
+      asignarEstrellasAleatorias(tablero, generador: Random(3));
+
+      limpiarEstrellas(tablero);
+
+      expect(
+        tablero.obtenerCeldasEstrella().every(
+          (estrella) => estrella.valor == null,
+        ),
+        isTrue,
+      );
+      expect(tablero.estanEstrellasCompletas(), isFalse);
+    });
+
+    test('InicioJuegoBloc llena y limpia las estrellas', () async {
+      final tablero = CreadorMapas.mapa1();
+      final bloc = InicioJuegoBloc(tablero);
+
+      bloc.add(EventoLlenarEstrellasAleatorio());
+      await pumpEventQueue();
+
+      expect(bloc.state.estanListasEstrellas, isTrue);
+      expect(tablero.estanEstrellasCompletas(), isTrue);
+
+      bloc.add(EventoLimpiarEstrellas());
+      await pumpEventQueue();
+
+      expect(bloc.state.estanListasEstrellas, isFalse);
+      expect(
+        tablero.obtenerCeldasEstrella().every(
+          (estrella) => estrella.valor == null,
+        ),
+        isTrue,
+      );
+
+      await bloc.close();
     });
   });
 }

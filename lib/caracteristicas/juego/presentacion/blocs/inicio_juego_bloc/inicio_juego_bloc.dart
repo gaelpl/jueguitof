@@ -59,5 +59,28 @@ class InicioJuegoBloc extends Bloc<InicioJuegoEvento, InicioJuegoEstado> {
         emit(state.copyWith(juegoIniciado: true));
       }
     });
+
+    on<EventoLlenarEstrellasAleatorio>((event, emit) {
+      if (state.juegoIniciado) return;
+
+      final tablero = state.tablero;
+      final exito = asignarEstrellasAleatorias(tablero);
+
+      emit(
+        state.copyWith(
+          tablero: tablero,
+          estanListasEstrellas: exito && tablero.estanEstrellasCompletas(),
+        ),
+      );
+    });
+
+    on<EventoLimpiarEstrellas>((event, emit) {
+      if (state.juegoIniciado) return;
+
+      final tablero = state.tablero;
+      limpiarEstrellas(tablero);
+
+      emit(state.copyWith(tablero: tablero, estanListasEstrellas: false));
+    });
   }
 }

@@ -152,6 +152,38 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                             ),
                           ),
 
+                          if (!state.juegoIniciado)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      context.read<InicioJuegoBloc>().add(
+                                        EventoLlenarEstrellasAleatorio(),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.casino_outlined),
+                                    label: const Text('Llenar Aleatorio'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      context.read<InicioJuegoBloc>().add(
+                                        EventoLimpiarEstrellas(),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.cleaning_services_outlined,
+                                    ),
+                                    label: const Text('Limpiar'),
+                                  ),
+                                ],
+                              ),
+                            ),
+
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             color: Colors.grey[100],
