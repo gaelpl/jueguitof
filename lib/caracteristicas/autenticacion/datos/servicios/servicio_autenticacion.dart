@@ -1,6 +1,9 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../dominio/validaciones_autenticacion.dart';
 
 class ServicioAutenticacion {
   // Nota: Para Flutter Web y escritorio usa 'http://localhost:3000'.
@@ -8,13 +11,17 @@ class ServicioAutenticacion {
   static const String _urlBase = 'http://localhost:3000';
 
   // Método para iniciar sesión (/login)
-  Future<Map<String, dynamic>> iniciarSesion(String usuario, String contrasena) async {
+  Future<Map<String, dynamic>> iniciarSesion(
+    String usuario,
+    String contrasena,
+  ) async {
     try {
+      final String usuarioNormalizado = normalizarNombreUsuario(usuario);
       final respuesta = await http.post(
         Uri.parse('$_urlBase/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'usuario': usuario,
+          'usuario': usuarioNormalizado,
           'contrasena': contrasena,
         }),
       );
@@ -45,13 +52,17 @@ class ServicioAutenticacion {
   }
 
   // Método para registrar un nuevo usuario (/register)
-  Future<Map<String, dynamic>> registrarUsuario(String usuario, String contrasena) async {
+  Future<Map<String, dynamic>> registrarUsuario(
+    String usuario,
+    String contrasena,
+  ) async {
     try {
+      final String usuarioNormalizado = normalizarNombreUsuario(usuario);
       final respuesta = await http.post(
         Uri.parse('$_urlBase/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'usuario': usuario,
+          'usuario': usuarioNormalizado,
           'contrasena': contrasena,
         }),
       );
@@ -83,14 +94,11 @@ class ServicioAutenticacion {
     }
   }
 
-    Future<Map<String, dynamic>> eliminarCuenta() async {
+  Future<Map<String, dynamic>> eliminarCuenta() async {
     try {
       final String? token = await obtenerTokenLocal();
       if (token == null) {
-        return {
-          'exito': false,
-          'mensaje': 'No hay una sesión activa.',
-        };
+        return {'exito': false, 'mensaje': 'No hay una sesión activa.'};
       }
 
       final respuesta = await http.delete(
@@ -109,7 +117,8 @@ class ServicioAutenticacion {
 
         return {
           'exito': true,
-          'mensaje': datosRespuesta['mensaje'] ?? 'Cuenta eliminada correctamente',
+          'mensaje':
+              datosRespuesta['mensaje'] ?? 'Cuenta eliminada correctamente',
         };
       } else {
         return {
@@ -127,19 +136,22 @@ class ServicioAutenticacion {
 
   // Método privado para guardar el token con SharedPreferences
   Future<void> _guardarTokenLocal(String token) async {
-    final SharedPreferences preferencias = await SharedPreferences.getInstance();
+    final SharedPreferences preferencias =
+        await SharedPreferences.getInstance();
     await preferencias.setString('token_jwt', token);
   }
 
   // Método para obtener el token guardado (útil para peticiones futuras en el juego)
   Future<String?> obtenerTokenLocal() async {
-    final SharedPreferences preferencias = await SharedPreferences.getInstance();
+    final SharedPreferences preferencias =
+        await SharedPreferences.getInstance();
     return preferencias.getString('token_jwt');
   }
 
   // Método para cerrar sesión (borrar el token)
   Future<void> cerrarSesion() async {
-    final SharedPreferences preferencias = await SharedPreferences.getInstance();
+    final SharedPreferences preferencias =
+        await SharedPreferences.getInstance();
     await preferencias.remove('token_jwt');
   }
 }

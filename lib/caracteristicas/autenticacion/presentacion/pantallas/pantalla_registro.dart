@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../datos/servicios/servicio_autenticacion.dart';
+import '../../dominio/validaciones_autenticacion.dart';
 import '../../../juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 
 const Color _azulProfundo = Color(0xFF312E81);
@@ -31,8 +32,8 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
   Future<void> _manejarRegistro() async {
     if (!_formularioKey.currentState!.validate()) return;
 
-    final String usuario = _usuarioControlador.text.trim();
-    final String contrasena = _contrasenaControlador.text.trim();
+    final String usuario = normalizarNombreUsuario(_usuarioControlador.text);
+    final String contrasena = _contrasenaControlador.text;
 
     setState(() {
       _estaCargando = true;
@@ -68,8 +69,9 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
       SnackBar(
         content: Text(mensaje),
         behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            esError ? const Color(0xFFDC2626) : const Color(0xFF059669),
+        backgroundColor: esError
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF059669),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -129,7 +131,9 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                           ),
                           tooltip: 'Volver',
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.14),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.14,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -230,24 +234,16 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
               controller: _usuarioControlador,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.newUsername],
+              maxLength: 30,
               decoration: _decoracionCampo(
                 etiqueta: 'Nombre de usuario',
                 pista: 'Ej. gael_pl',
                 icono: Icons.person_outline_rounded,
+              ).copyWith(counterText: ''),
+              validator: (valor) => validarNombreUsuario(
+                valor,
+                mensajeVacio: 'Ingresa un nombre de usuario',
               ),
-              validator: (valor) {
-                final usuario = valor?.trim() ?? '';
-                if (usuario.isEmpty) {
-                  return 'Ingresa un nombre de usuario';
-                }
-                if (usuario.length < 3 || usuario.length > 30) {
-                  return 'Debe tener entre 3 y 30 caracteres';
-                }
-                if (!RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(usuario)) {
-                  return 'Usa solo letras, números, puntos, guiones o guiones bajos';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(

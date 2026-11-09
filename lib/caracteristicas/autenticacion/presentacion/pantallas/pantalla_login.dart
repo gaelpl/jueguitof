@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../datos/servicios/servicio_autenticacion.dart';
+import '../../dominio/validaciones_autenticacion.dart';
 import '../../../juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 import 'pantalla_registro.dart';
 
@@ -29,8 +30,8 @@ class _PantallaLoginState extends State<PantallaLogin> {
   Future<void> _manejarEnvioFormulario() async {
     if (!_formularioKey.currentState!.validate()) return;
 
-    final String usuario = _usuarioControlador.text.trim();
-    final String contrasena = _contrasenaControlador.text.trim();
+    final String usuario = normalizarNombreUsuario(_usuarioControlador.text);
+    final String contrasena = _contrasenaControlador.text;
 
     setState(() {
       _estaCargando = true;
@@ -65,7 +66,9 @@ class _PantallaLoginState extends State<PantallaLogin> {
       SnackBar(
         content: Text(mensaje),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: esError ? const Color(0xFFDC2626) : const Color(0xFF059669),
+        backgroundColor: esError
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF059669),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -94,7 +97,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
             Positioned(
               top: -90,
               right: -70,
-              child: _circuloDecorativo(240, Colors.white.withValues(alpha: 0.06)),
+              child: _circuloDecorativo(
+                240,
+                Colors.white.withValues(alpha: 0.06),
+              ),
             ),
             Positioned(
               bottom: -110,
@@ -104,7 +110,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: _construirTarjeta(),
@@ -191,28 +200,27 @@ class _PantallaLoginState extends State<PantallaLogin> {
             const Text(
               'Inicia sesión para continuar tu partida.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: _textoSecundario, height: 1.4),
+              style: TextStyle(
+                fontSize: 14,
+                color: _textoSecundario,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 28),
             TextFormField(
               controller: _usuarioControlador,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.username],
+              maxLength: 30,
               decoration: _decoracionCampo(
                 etiqueta: 'Nombre de usuario',
                 pista: 'Ej. gael_pl',
                 icono: Icons.person_outline_rounded,
+              ).copyWith(counterText: ''),
+              validator: (valor) => validarNombreUsuario(
+                valor,
+                mensajeVacio: 'Ingresa tu nombre de usuario',
               ),
-              validator: (valor) {
-                final usuario = valor?.trim() ?? '';
-                if (usuario.isEmpty) {
-                  return 'Ingresa tu nombre de usuario';
-                }
-                if (usuario.length < 3) {
-                  return 'Debe tener al menos 3 caracteres';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -276,7 +284,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
                         },
                   child: const Text(
                     'Regístrate',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: _azulProfundo),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: _azulProfundo,
+                    ),
                   ),
                 ),
               ],
@@ -301,7 +312,10 @@ InputDecoration _decoracionCampo({
     suffixIcon: sufijo,
     filled: true,
     fillColor: _fondoCampo,
-    labelStyle: const TextStyle(color: _textoSecundario, fontWeight: FontWeight.w500),
+    labelStyle: const TextStyle(
+      color: _textoSecundario,
+      fontWeight: FontWeight.w500,
+    ),
     hintStyle: TextStyle(color: _textoSecundario.withValues(alpha: 0.7)),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
     border: OutlineInputBorder(
