@@ -15,6 +15,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final String? _codigoSala;
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
+  late final StreamSubscription<bool> _suscripcionRivalConcedio;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
@@ -34,6 +35,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoColocarNumeroEnObjetivo>(_onColocarNumeroEnObjetivo);
     on<EventoLimpiarSeleccionAncla>(_onLimpiarSeleccionAncla);
     on<EventoMovimientoRemotoRecibido>(_onMovimientoRemotoRecibido);
+    on<EventoRendirse>(_onRendirse);
+    on<EventoRivalConcedio>(_onRivalConcedio);
 
     _suscripcionMovimiento = _servicioSocket.movimientoRecibido.listen((datos) {
       final int? x = _comoEntero(datos['x'] ?? datos['columna']);
@@ -44,6 +47,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
       add(EventoMovimientoRemotoRecibido(x, y, valor));
     });
+
+    _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
+      (_) => add(EventoRivalConcedio()),
+    );
   }
 
   void _onLanzarDados(EventoLanzarDados event, Emitter<JuegoTurnoEstado> emit) {
@@ -161,6 +168,33 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     emit(state.copyWith(limpiarAncla: true));
   }
 
+  void _onRendirse(EventoRendirse event, Emitter<JuegoTurnoEstado> emit) {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.concederPartida(_codigoSala);
+    } catch (_) {
+      return;
+    }
+  }
+
+  void _onRivalConcedio(
+    EventoRivalConcedio event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    emit(
+      JuegoGanadoPorAbandono(
+        tablero: state.tablero,
+        dado1: state.dado1,
+        dado2: state.dado2,
+        indiceDadoAncla: state.indiceDadoAncla,
+        celdaAncla: state.celdaAncla,
+        celdasObjetivoValidas: state.celdasObjetivoValidas,
+        puntuacionTotal: state.puntuacionTotal,
+      ),
+    );
+  }
+
   void _emitirMovimiento(int x, int y, int valor) {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
@@ -185,6 +219,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   @override
   Future<void> close() async {
     await _suscripcionMovimiento.cancel();
+    await _suscripcionRivalConcedio.cancel();
     return super.close();
   }
 }

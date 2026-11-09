@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../nucleo/tema/colores_region.dart';
 import '../../dominio/logica/juego_logica.dart';
 import '../blocs/juego_turno_bloc/juego_turno_bloc.dart';
+import 'pantalla_menu_mapas.dart';
 
 /// Pantalla Principal de Juego por Turnos
 class PantallaJuegoTurno extends StatelessWidget {
@@ -21,7 +22,12 @@ class PantallaJuegoTurno extends StatelessWidget {
           title: const Text('Brilliant - Partida'),
           centerTitle: true,
         ),
-        body: BlocBuilder<JuegoTurnoBloc, JuegoTurnoEstado>(
+        body: BlocConsumer<JuegoTurnoBloc, JuegoTurnoEstado>(
+          listener: (context, state) {
+            if (state is JuegoGanadoPorAbandono) {
+              _mostrarDialogoVictoria(context);
+            }
+          },
           builder: (context, state) {
             return SafeArea(
               child: Column(
@@ -228,6 +234,27 @@ class PantallaJuegoTurno extends StatelessWidget {
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () {
+                            context.read<JuegoTurnoBloc>().add(
+                              EventoRendirse(),
+                            );
+                          },
+                          icon: const Icon(Icons.flag),
+                          label: const Text(
+                            'Rendirse',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -236,6 +263,29 @@ class PantallaJuegoTurno extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _mostrarDialogoVictoria(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('¡Has ganado!'),
+        content: const Text('Tu oponente se ha rendido'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const PantallaMenuMapas()),
+                (route) => false,
+              );
+            },
+            child: const Text('Volver al menú de mapas'),
+          ),
+        ],
       ),
     );
   }

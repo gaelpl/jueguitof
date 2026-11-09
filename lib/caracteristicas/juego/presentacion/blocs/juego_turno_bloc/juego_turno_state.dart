@@ -61,3 +61,15 @@ class JuegoTurnoEstado {
     );
   }
 }
+
+class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
+  const JuegoGanadoPorAbandono({
+    required super.tablero,
+    super.dado1,
+    super.dado2,
+    super.indiceDadoAncla,
+    super.celdaAncla,
+    super.celdasObjetivoValidas,
+    super.puntuacionTotal,
+  });
+}

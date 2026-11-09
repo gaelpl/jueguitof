@@ -20,6 +20,8 @@ class JuegoEstadoFin extends JuegoEstado {
   JuegoEstadoFin({required this.motivo});
 }
 
+class JuegoGanadoPorAbandono extends JuegoEstado {}
+
 abstract class JuegoEvento {}
 
 class EventoColocarNumeroInicial extends JuegoEvento {
@@ -38,6 +40,10 @@ class EventoMovimientoRecibido extends JuegoEvento {
 
 class EventoAbandonar extends JuegoEvento {}
 
+class EventoConcederPartida extends JuegoEvento {}
+
+class EventoRivalConcedio extends JuegoEvento {}
+
 class JuegoBloc {
   final Tablero tablero;
   final ServicioSocket _servicioSocket;
@@ -50,6 +56,7 @@ class JuegoBloc {
   JuegoEstado get estadoActual => _estado;
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
+  late final StreamSubscription<bool> _suscripcionRivalConcedio;
 
   JuegoBloc(this.tablero, {ServicioSocket? servicioSocket, String? codigoSala})
     : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
@@ -63,9 +70,24 @@ class JuegoBloc {
 
       procesarEvento(EventoMovimientoRecibido(x, y, valor));
     });
+
+    _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
+      (_) => procesarEvento(EventoRivalConcedio()),
+    );
   }
 
   void procesarEvento(JuegoEvento evento) {
+    if (evento is EventoConcederPartida) {
+      _concederPartida();
+      return;
+    }
+
+    if (evento is EventoRivalConcedio) {
+      _estado = JuegoGanadoPorAbandono();
+      _controladorEstado.add(_estado);
+      return;
+    }
+
     if (evento is EventoAbandonar) {
       _estado = JuegoEstadoFin(motivo: 'El jugador abandono la partida');
       _controladorEstado.add(_estado);
@@ -116,6 +138,16 @@ class JuegoBloc {
         : JuegoEstadoTurno(mensaje: 'Movimiento recibido');
   }
 
+  void _concederPartida() {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.concederPartida(_codigoSala);
+    } catch (_) {
+      return;
+    }
+  }
+
   void _emitirMovimiento(int x, int y, int valor) {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
@@ -139,6 +171,7 @@ class JuegoBloc {
 
   void dispose() {
     _suscripcionMovimiento.cancel();
+    _suscripcionRivalConcedio.cancel();
     _controladorEstado.close();
   }
 }

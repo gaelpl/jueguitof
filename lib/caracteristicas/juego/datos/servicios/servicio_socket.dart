@@ -24,6 +24,8 @@ class ServicioSocket {
       StreamController<String>.broadcast();
   final StreamController<Map<String, dynamic>> _controladorMovimientoRecibido =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<bool> _controladorRivalConcedio =
+      StreamController<bool>.broadcast();
 
   Stream<String> get salaCreada => _controladorSalaCreada.stream;
   Stream<Map<String, dynamic>> get partidaLista =>
@@ -32,6 +34,7 @@ class ServicioSocket {
   Stream<String> get errorConexion => _controladorErrorConexion.stream;
   Stream<Map<String, dynamic>> get movimientoRecibido =>
       _controladorMovimientoRecibido.stream;
+  Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
 
   bool get conectado => _socket?.connected ?? false;
 
@@ -104,6 +107,10 @@ class ServicioSocket {
       }
     });
 
+    socket.on('rival_concedio', (_) {
+      _controladorRivalConcedio.add(true);
+    });
+
     _socket = socket;
     socket.connect();
   }
@@ -133,6 +140,14 @@ class ServicioSocket {
       ...datos,
       'codigoSala': codigoSala.trim().toUpperCase(),
     });
+  }
+
+  void concederPartida(String codigoSala) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('conceder_partida', codigoSala.trim().toUpperCase());
   }
 
   Future<void> desconectar() async {

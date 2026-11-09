@@ -39,3 +39,7 @@ class EventoMovimientoRemotoRecibido extends JuegoTurnoEvento {
 
   EventoMovimientoRemotoRecibido(this.x, this.y, this.valor);
 }
+
+class EventoRendirse extends JuegoTurnoEvento {}
+
+class EventoRivalConcedio extends JuegoTurnoEvento {}
