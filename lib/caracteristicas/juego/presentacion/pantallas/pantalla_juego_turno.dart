@@ -1,22 +1,52 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../nucleo/tema/colores_region.dart';
+import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/logica/juego_logica.dart';
 import '../blocs/juego_turno_bloc/juego_turno_bloc.dart';
 import 'pantalla_menu_mapas.dart';
 
 /// Pantalla Principal de Juego por Turnos
-class PantallaJuegoTurno extends StatelessWidget {
+class PantallaJuegoTurno extends StatefulWidget {
   final Tablero tablero;
   final String? codigoSala;
 
   const PantallaJuegoTurno({super.key, required this.tablero, this.codigoSala});
 
   @override
+  State<PantallaJuegoTurno> createState() => _PantallaJuegoTurnoState();
+}
+
+class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
+  late final StreamSubscription<bool> _suscripcionConexion;
+  bool _conexionInestable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _conexionInestable = ServicioSocket.instancia.conexionInestableActual;
+    _suscripcionConexion = ServicioSocket.instancia.conexionInestable.listen((
+      inestable,
+    ) {
+      if (!mounted) return;
+      setState(() => _conexionInestable = inestable);
+    });
+  }
+
+  @override
+  void dispose() {
+    _suscripcionConexion.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => JuegoTurnoBloc(tablero, codigoSala: codigoSala),
+      create: (_) =>
+          JuegoTurnoBloc(widget.tablero, codigoSala: widget.codigoSala),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Brilliant - Partida'),
@@ -27,11 +57,15 @@ class PantallaJuegoTurno extends StatelessWidget {
             if (state is JuegoGanadoPorAbandono) {
               _mostrarDialogoVictoria(context);
             }
+            if (state is JuegoCanceladoDesconexion) {
+              _mostrarDialogoDesconexion(context);
+            }
           },
           builder: (context, state) {
             return SafeArea(
               child: Column(
                 children: [
+                  if (_conexionInestable) _construirBannerConexion(),
                   Container(
                     margin: const EdgeInsets.all(12),
                     padding: const EdgeInsets.symmetric(
@@ -66,102 +100,105 @@ class PantallaJuegoTurno extends StatelessWidget {
                   ),
 
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: GridView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 7,
-                                crossAxisSpacing: 3,
-                                mainAxisSpacing: 3,
-                              ),
-                          itemCount: 49,
-                          itemBuilder: (context, index) {
-                            int col = index % 7;
-                            int fila = index ~/ 7;
-                            final celda = state.tablero.obtenerCeldaEn(
-                              col,
-                              fila,
-                            );
+                    child: AbsorbPointer(
+                      absorbing: _conexionInestable,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 7,
+                                  crossAxisSpacing: 3,
+                                  mainAxisSpacing: 3,
+                                ),
+                            itemCount: 49,
+                            itemBuilder: (context, index) {
+                              int col = index % 7;
+                              int fila = index ~/ 7;
+                              final celda = state.tablero.obtenerCeldaEn(
+                                col,
+                                fila,
+                              );
 
-                            if (celda == null) return const SizedBox();
+                              if (celda == null) return const SizedBox();
 
-                            final bool esAncla = state.celdaAncla == celda;
-                            final bool esObjetivoValido = state
-                                .celdasObjetivoValidas
-                                .contains(celda);
+                              final bool esAncla = state.celdaAncla == celda;
+                              final bool esObjetivoValido = state
+                                  .celdasObjetivoValidas
+                                  .contains(celda);
 
-                            return GestureDetector(
-                              onTap: () {
-                                if (celda.valor != null) {
-                                  context.read<JuegoTurnoBloc>().add(
-                                    EventoSeleccionarAnclaTablero(celda),
-                                  );
-                                } else if (esObjetivoValido) {
-                                  context.read<JuegoTurnoBloc>().add(
-                                    EventoColocarNumeroEnObjetivo(celda),
-                                  );
-                                }
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                decoration: BoxDecoration(
-                                  color: esObjetivoValido
-                                      ? Colors.amberAccent
-                                      : colorDeRegion(celda.region),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: esAncla
-                                        ? Colors.white
-                                        : (esObjetivoValido
-                                              ? Colors.amber.shade900
-                                              : Colors.black26),
-                                    width: esAncla
-                                        ? 3.5
-                                        : (esObjetivoValido ? 3 : 1),
-                                  ),
-                                  boxShadow: esObjetivoValido
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.amber.withValues(
-                                              alpha: 0.8,
+                              return GestureDetector(
+                                onTap: () {
+                                  if (celda.valor != null) {
+                                    context.read<JuegoTurnoBloc>().add(
+                                      EventoSeleccionarAnclaTablero(celda),
+                                    );
+                                  } else if (esObjetivoValido) {
+                                    context.read<JuegoTurnoBloc>().add(
+                                      EventoColocarNumeroEnObjetivo(celda),
+                                    );
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  decoration: BoxDecoration(
+                                    color: esObjetivoValido
+                                        ? Colors.amberAccent
+                                        : colorDeRegion(celda.region),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: esAncla
+                                          ? Colors.white
+                                          : (esObjetivoValido
+                                                ? Colors.amber.shade900
+                                                : Colors.black26),
+                                      width: esAncla
+                                          ? 3.5
+                                          : (esObjetivoValido ? 3 : 1),
+                                    ),
+                                    boxShadow: esObjetivoValido
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.amber.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
                                             ),
-                                            blurRadius: 8,
-                                            spreadRadius: 2,
-                                          ),
-                                        ]
-                                      : null,
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: celda.valor != null
+                                        ? Text(
+                                            '${celda.valor}',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  celda.region ==
+                                                          Region.amarillo ||
+                                                      celda.region ==
+                                                          Region.blanco
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                            ),
+                                          )
+                                        : (esObjetivoValido
+                                              ? const Icon(
+                                                  Icons.add_circle,
+                                                  color: Colors.black87,
+                                                  size: 22,
+                                                )
+                                              : null),
+                                  ),
                                 ),
-                                child: Center(
-                                  child: celda.valor != null
-                                      ? Text(
-                                          '${celda.valor}',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                celda.region ==
-                                                        Region.amarillo ||
-                                                    celda.region ==
-                                                        Region.blanco
-                                                ? Colors.black
-                                                : Colors.white,
-                                          ),
-                                        )
-                                      : (esObjetivoValido
-                                            ? const Icon(
-                                                Icons.add_circle,
-                                                color: Colors.black87,
-                                                size: 22,
-                                              )
-                                            : null),
-                                ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -223,11 +260,13 @@ class PantallaJuegoTurno extends StatelessWidget {
                               vertical: 12,
                             ),
                           ),
-                          onPressed: () {
-                            context.read<JuegoTurnoBloc>().add(
-                              EventoLanzarDados(),
-                            );
-                          },
+                          onPressed: _conexionInestable
+                              ? null
+                              : () {
+                                  context.read<JuegoTurnoBloc>().add(
+                                    EventoLanzarDados(),
+                                  );
+                                },
                           icon: const Icon(Icons.casino),
                           label: const Text(
                             'Lanzar 2 Dados',
@@ -244,11 +283,13 @@ class PantallaJuegoTurno extends StatelessWidget {
                               vertical: 12,
                             ),
                           ),
-                          onPressed: () {
-                            context.read<JuegoTurnoBloc>().add(
-                              EventoRendirse(),
-                            );
-                          },
+                          onPressed: _conexionInestable
+                              ? null
+                              : () {
+                                  context.read<JuegoTurnoBloc>().add(
+                                    EventoRendirse(),
+                                  );
+                                },
                           icon: const Icon(Icons.flag),
                           label: const Text(
                             'Rendirse',
@@ -263,6 +304,59 @@ class PantallaJuegoTurno extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _construirBannerConexion() {
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade800,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Conexión inestable. Reconectando...',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarDialogoDesconexion(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Partida cancelada'),
+        content: const Text('La partida terminó. El rival perdió la conexión'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const PantallaMenuMapas()),
+                (route) => false,
+              );
+            },
+            child: const Text('Volver al menú de mapas'),
+          ),
+        ],
       ),
     );
   }
@@ -308,7 +402,7 @@ class PantallaJuegoTurno extends StatelessWidget {
       ),
       selected: esAncla,
       selectedColor: Theme.of(context).colorScheme.primary,
-      onSelected: (_) => onTap(),
+      onSelected: _conexionInestable ? null : (_) => onTap(),
     );
   }
 }

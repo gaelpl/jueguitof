@@ -22,6 +22,8 @@ class JuegoEstadoFin extends JuegoEstado {
 
 class JuegoGanadoPorAbandono extends JuegoEstado {}
 
+class JuegoCanceladoDesconexion extends JuegoEstado {}
+
 abstract class JuegoEvento {}
 
 class EventoColocarNumeroInicial extends JuegoEvento {
@@ -44,6 +46,8 @@ class EventoConcederPartida extends JuegoEvento {}
 
 class EventoRivalConcedio extends JuegoEvento {}
 
+class EventoRivalDesconectado extends JuegoEvento {}
+
 class JuegoBloc {
   final Tablero tablero;
   final ServicioSocket _servicioSocket;
@@ -57,6 +61,7 @@ class JuegoBloc {
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
+  late final StreamSubscription<bool> _suscripcionRivalDesconectado;
 
   JuegoBloc(this.tablero, {ServicioSocket? servicioSocket, String? codigoSala})
     : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
@@ -74,6 +79,14 @@ class JuegoBloc {
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => procesarEvento(EventoRivalConcedio()),
     );
+
+    _suscripcionRivalDesconectado = _servicioSocket.rivalDesconectado.listen(
+      (_) => procesarEvento(EventoRivalDesconectado()),
+    );
+
+    if (_codigoSala != null) {
+      _servicioSocket.iniciarPartida();
+    }
   }
 
   void procesarEvento(JuegoEvento evento) {
@@ -83,7 +96,15 @@ class JuegoBloc {
     }
 
     if (evento is EventoRivalConcedio) {
+      _servicioSocket.finalizarPartida();
       _estado = JuegoGanadoPorAbandono();
+      _controladorEstado.add(_estado);
+      return;
+    }
+
+    if (evento is EventoRivalDesconectado) {
+      _servicioSocket.finalizarPartida();
+      _estado = JuegoCanceladoDesconexion();
       _controladorEstado.add(_estado);
       return;
     }
@@ -172,6 +193,10 @@ class JuegoBloc {
   void dispose() {
     _suscripcionMovimiento.cancel();
     _suscripcionRivalConcedio.cancel();
+    _suscripcionRivalDesconectado.cancel();
+    if (_codigoSala != null) {
+      _servicioSocket.finalizarPartida();
+    }
     _controladorEstado.close();
   }
 }

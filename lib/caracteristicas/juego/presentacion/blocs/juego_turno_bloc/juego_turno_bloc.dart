@@ -16,6 +16,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
+  late final StreamSubscription<bool> _suscripcionRivalDesconectado;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
@@ -37,6 +38,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoMovimientoRemotoRecibido>(_onMovimientoRemotoRecibido);
     on<EventoRendirse>(_onRendirse);
     on<EventoRivalConcedio>(_onRivalConcedio);
+    on<EventoRivalDesconectado>(_onRivalDesconectado);
 
     _suscripcionMovimiento = _servicioSocket.movimientoRecibido.listen((datos) {
       final int? x = _comoEntero(datos['x'] ?? datos['columna']);
@@ -51,6 +53,14 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => add(EventoRivalConcedio()),
     );
+
+    _suscripcionRivalDesconectado = _servicioSocket.rivalDesconectado.listen(
+      (_) => add(EventoRivalDesconectado()),
+    );
+
+    if (_codigoSala != null) {
+      _servicioSocket.iniciarPartida();
+    }
   }
 
   void _onLanzarDados(EventoLanzarDados event, Emitter<JuegoTurnoEstado> emit) {
@@ -182,8 +192,27 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoRivalConcedio event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    _servicioSocket.finalizarPartida();
     emit(
       JuegoGanadoPorAbandono(
+        tablero: state.tablero,
+        dado1: state.dado1,
+        dado2: state.dado2,
+        indiceDadoAncla: state.indiceDadoAncla,
+        celdaAncla: state.celdaAncla,
+        celdasObjetivoValidas: state.celdasObjetivoValidas,
+        puntuacionTotal: state.puntuacionTotal,
+      ),
+    );
+  }
+
+  void _onRivalDesconectado(
+    EventoRivalDesconectado event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    _servicioSocket.finalizarPartida();
+    emit(
+      JuegoCanceladoDesconexion(
         tablero: state.tablero,
         dado1: state.dado1,
         dado2: state.dado2,
@@ -220,6 +249,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   Future<void> close() async {
     await _suscripcionMovimiento.cancel();
     await _suscripcionRivalConcedio.cancel();
+    await _suscripcionRivalDesconectado.cancel();
+    if (_codigoSala != null) {
+      _servicioSocket.finalizarPartida();
+    }
     return super.close();
   }
 }

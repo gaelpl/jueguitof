@@ -26,6 +26,13 @@ class ServicioSocket {
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<bool> _controladorRivalConcedio =
       StreamController<bool>.broadcast();
+  final StreamController<bool> _controladorRivalDesconectado =
+      StreamController<bool>.broadcast();
+  final StreamController<bool> _controladorConexionInestable =
+      StreamController<bool>.broadcast();
+
+  bool _enPartida = false;
+  bool _conexionInestableActual = false;
 
   Stream<String> get salaCreada => _controladorSalaCreada.stream;
   Stream<Map<String, dynamic>> get partidaLista =>
@@ -35,6 +42,23 @@ class ServicioSocket {
   Stream<Map<String, dynamic>> get movimientoRecibido =>
       _controladorMovimientoRecibido.stream;
   Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
+  Stream<bool> get rivalDesconectado => _controladorRivalDesconectado.stream;
+  Stream<bool> get conexionInestable => _controladorConexionInestable.stream;
+  bool get conexionInestableActual => _conexionInestableActual;
+
+  void iniciarPartida() {
+    _enPartida = true;
+  }
+
+  void finalizarPartida() {
+    _enPartida = false;
+    _actualizarConexionInestable(false);
+  }
+
+  void _actualizarConexionInestable(bool inestable) {
+    _conexionInestableActual = inestable;
+    _controladorConexionInestable.add(inestable);
+  }
 
   bool get conectado => _socket?.connected ?? false;
 
@@ -67,18 +91,31 @@ class ServicioSocket {
           .build(),
     );
 
-    socket.onConnect((_) {});
+    socket.onConnect((_) {
+      if (_enPartida) {
+        _actualizarConexionInestable(false);
+      }
+    });
 
     socket.onConnectError((_) {
       _controladorErrorConexion.add(
         'No se pudo conectar con el servidor de partidas.',
       );
+      if (_enPartida) {
+        _actualizarConexionInestable(true);
+      }
     });
 
     socket.onError((_) {
       _controladorErrorConexion.add(
         'Ocurrió un error en la conexión con el servidor.',
       );
+    });
+
+    socket.onDisconnect((_) {
+      if (_enPartida) {
+        _actualizarConexionInestable(true);
+      }
     });
 
     socket.on('sala_creada', (datos) {
@@ -109,6 +146,10 @@ class ServicioSocket {
 
     socket.on('rival_concedio', (_) {
       _controladorRivalConcedio.add(true);
+    });
+
+    socket.on('rival_desconectado', (_) {
+      _controladorRivalDesconectado.add(true);
     });
 
     _socket = socket;
@@ -151,6 +192,7 @@ class ServicioSocket {
   }
 
   Future<void> desconectar() async {
+    finalizarPartida();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;

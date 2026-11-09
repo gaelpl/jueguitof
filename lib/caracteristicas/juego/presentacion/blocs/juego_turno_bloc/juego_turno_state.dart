@@ -73,3 +73,15 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.puntuacionTotal,
   });
 }
+
+class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
+  const JuegoCanceladoDesconexion({
+    required super.tablero,
+    super.dado1,
+    super.dado2,
+    super.indiceDadoAncla,
+    super.celdaAncla,
+    super.celdasObjetivoValidas,
+    super.puntuacionTotal,
+  });
+}

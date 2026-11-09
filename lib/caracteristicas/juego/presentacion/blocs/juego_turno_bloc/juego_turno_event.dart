@@ -43,3 +43,5 @@ class EventoMovimientoRemotoRecibido extends JuegoTurnoEvento {
 class EventoRendirse extends JuegoTurnoEvento {}
 
 class EventoRivalConcedio extends JuegoTurnoEvento {}
+
+class EventoRivalDesconectado extends JuegoTurnoEvento {}
