@@ -8,13 +8,14 @@ import '../blocs/juego_turno_bloc/juego_turno_bloc.dart';
 /// Pantalla Principal de Juego por Turnos
 class PantallaJuegoTurno extends StatelessWidget {
   final Tablero tablero;
+  final String? codigoSala;
 
-  const PantallaJuegoTurno({super.key, required this.tablero});
+  const PantallaJuegoTurno({super.key, required this.tablero, this.codigoSala});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => JuegoTurnoBloc(tablero),
+      create: (_) => JuegoTurnoBloc(tablero, codigoSala: codigoSala),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Brilliant - Partida'),

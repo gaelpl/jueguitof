@@ -24,6 +24,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   final TextEditingController _codigoControlador = TextEditingController();
 
   bool _navegacionRealizada = false;
+  String? _codigoSalaActual;
 
   @override
   void dispose() {
@@ -36,8 +37,9 @@ class _PantallaLobbyState extends State<PantallaLobby> {
       SnackBar(
         content: Text(mensaje),
         behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            esError ? const Color(0xFFDC2626) : const Color(0xFF059669),
+        backgroundColor: esError
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF059669),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -49,6 +51,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
         builder: (_) => PantallaSeleccionInicial(
           tablero: CreadorMapas.obtenerMapa(1),
           numeroMapa: 1,
+          codigoSala: _codigoSalaActual,
         ),
       ),
     );
@@ -86,10 +89,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
               Positioned(
                 bottom: -110,
                 left: -80,
-                child: _circuloDecorativo(
-                  280,
-                  _cian.withValues(alpha: 0.18),
-                ),
+                child: _circuloDecorativo(280, _cian.withValues(alpha: 0.18)),
               ),
               if (Navigator.of(context).canPop())
                 Positioned(
@@ -124,8 +124,12 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                             _mostrarMensaje(estado.mensaje, esError: true);
                           }
 
-                          if (estado is PartidaLista &&
-                              !_navegacionRealizada) {
+                          if (estado is EsperandoRival) {
+                            _codigoSalaActual = estado.codigo;
+                          }
+
+                          if (estado is PartidaLista && !_navegacionRealizada) {
+                            _codigoSalaActual = estado.codigo;
                             _navegacionRealizada = true;
                             _irAlJuego();
                           }
@@ -287,9 +291,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
               const SizedBox(height: 8),
               TextButton.icon(
                 onPressed: () async {
-                  await Clipboard.setData(
-                    ClipboardData(text: estado.codigo),
-                  );
+                  await Clipboard.setData(ClipboardData(text: estado.codigo));
                   if (!mounted) return;
                   _mostrarMensaje('Código copiado al portapapeles.');
                 },
@@ -342,7 +344,9 @@ class _PantallaLobbyState extends State<PantallaLobby> {
         const SizedBox(height: 24),
         Row(
           children: [
-            Expanded(child: Divider(color: _textoSecundario.withValues(alpha: 0.25))),
+            Expanded(
+              child: Divider(color: _textoSecundario.withValues(alpha: 0.25)),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
@@ -354,7 +358,9 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                 ),
               ),
             ),
-            Expanded(child: Divider(color: _textoSecundario.withValues(alpha: 0.25))),
+            Expanded(
+              child: Divider(color: _textoSecundario.withValues(alpha: 0.25)),
+            ),
           ],
         ),
         const SizedBox(height: 24),

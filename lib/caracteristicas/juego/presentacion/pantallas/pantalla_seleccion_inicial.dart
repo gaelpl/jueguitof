@@ -9,11 +9,13 @@ import 'pantalla_juego_turno.dart';
 class PantallaSeleccionInicial extends StatefulWidget {
   final Tablero tablero;
   final int numeroMapa;
+  final String? codigoSala;
 
   const PantallaSeleccionInicial({
     super.key,
     required this.tablero,
     required this.numeroMapa,
+    this.codigoSala,
   });
 
   @override
@@ -37,7 +39,10 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
             if (state.juegoIniciado) {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (_) => PantallaJuegoTurno(tablero: state.tablero),
+                  builder: (_) => PantallaJuegoTurno(
+                    tablero: state.tablero,
+                    codigoSala: widget.codigoSala,
+                  ),
                 ),
               );
             }

@@ -22,12 +22,16 @@ class ServicioSocket {
       StreamController<String>.broadcast();
   final StreamController<String> _controladorErrorConexion =
       StreamController<String>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorMovimientoRecibido =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<String> get salaCreada => _controladorSalaCreada.stream;
   Stream<Map<String, dynamic>> get partidaLista =>
       _controladorPartidaLista.stream;
   Stream<String> get errorSala => _controladorErrorSala.stream;
   Stream<String> get errorConexion => _controladorErrorConexion.stream;
+  Stream<Map<String, dynamic>> get movimientoRecibido =>
+      _controladorMovimientoRecibido.stream;
 
   bool get conectado => _socket?.connected ?? false;
 
@@ -94,6 +98,12 @@ class ServicioSocket {
       );
     });
 
+    socket.on('movimiento_recibido', (datos) {
+      if (datos is Map) {
+        _controladorMovimientoRecibido.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
     _socket = socket;
     socket.connect();
   }
@@ -112,6 +122,17 @@ class ServicioSocket {
       throw StateError('El socket no está inicializado.');
     }
     socket.emit('unirse_sala', codigo.trim().toUpperCase());
+  }
+
+  void enviarMovimiento(String codigoSala, Map<String, dynamic> datos) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('movimiento_tablero', {
+      ...datos,
+      'codigoSala': codigoSala.trim().toUpperCase(),
+    });
   }
 
   Future<void> desconectar() async {

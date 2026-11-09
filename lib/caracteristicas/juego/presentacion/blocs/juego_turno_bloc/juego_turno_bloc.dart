@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../datos/servicios/servicio_socket.dart';
 import '../../../dominio/logica/juego_logica.dart';
 import 'juego_turno_event.dart';
 import 'juego_turno_state.dart';
@@ -8,18 +11,39 @@ export 'juego_turno_event.dart';
 export 'juego_turno_state.dart';
 
 class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
-  JuegoTurnoBloc(Tablero tableroInicial)
-    : super(
-        JuegoTurnoEstado(
-          tablero: tableroInicial,
-          puntuacionTotal: calcularPuntuacionTotal(tableroInicial),
-        ),
-      ) {
+  final ServicioSocket _servicioSocket;
+  final String? _codigoSala;
+
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
+
+  JuegoTurnoBloc(
+    Tablero tableroInicial, {
+    ServicioSocket? servicioSocket,
+    String? codigoSala,
+  }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
+       _codigoSala = codigoSala,
+       super(
+         JuegoTurnoEstado(
+           tablero: tableroInicial,
+           puntuacionTotal: calcularPuntuacionTotal(tableroInicial),
+         ),
+       ) {
     on<EventoLanzarDados>(_onLanzarDados);
     on<EventoSeleccionarDadoAncla>(_onSeleccionarDadoAncla);
     on<EventoSeleccionarAnclaTablero>(_onSeleccionarAnclaTablero);
     on<EventoColocarNumeroEnObjetivo>(_onColocarNumeroEnObjetivo);
     on<EventoLimpiarSeleccionAncla>(_onLimpiarSeleccionAncla);
+    on<EventoMovimientoRemotoRecibido>(_onMovimientoRemotoRecibido);
+
+    _suscripcionMovimiento = _servicioSocket.movimientoRecibido.listen((datos) {
+      final int? x = _comoEntero(datos['x'] ?? datos['columna']);
+      final int? y = _comoEntero(datos['y'] ?? datos['fila']);
+      final int? valor = _comoEntero(datos['valor']);
+
+      if (x == null || y == null || valor == null) return;
+
+      add(EventoMovimientoRemotoRecibido(x, y, valor));
+    });
   }
 
   void _onLanzarDados(EventoLanzarDados event, Emitter<JuegoTurnoEstado> emit) {
@@ -104,7 +128,30 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           limpiarDados: true,
         ),
       );
+
+      _emitirMovimiento(
+        event.celdaObjetivo.columna,
+        event.celdaObjetivo.fila,
+        dColocar.valor,
+      );
     }
+  }
+
+  void _onMovimientoRemotoRecibido(
+    EventoMovimientoRemotoRecibido event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    final celda = state.tablero.obtenerCeldaEn(event.x, event.y);
+    if (celda == null) return;
+
+    celda.asignarValor(event.valor);
+
+    emit(
+      state.copyWith(
+        tablero: state.tablero,
+        puntuacionTotal: calcularPuntuacionTotal(state.tablero),
+      ),
+    );
   }
 
   void _onLimpiarSeleccionAncla(
@@ -112,5 +159,32 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     Emitter<JuegoTurnoEstado> emit,
   ) {
     emit(state.copyWith(limpiarAncla: true));
+  }
+
+  void _emitirMovimiento(int x, int y, int valor) {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.enviarMovimiento(_codigoSala, {
+        'x': x,
+        'y': y,
+        'valor': valor,
+      });
+    } catch (_) {
+      return;
+    }
+  }
+
+  int? _comoEntero(dynamic valor) {
+    if (valor is int) return valor;
+    if (valor is num) return valor.toInt();
+    if (valor is String) return int.tryParse(valor);
+    return null;
+  }
+
+  @override
+  Future<void> close() async {
+    await _suscripcionMovimiento.cancel();
+    return super.close();
   }
 }
