@@ -158,13 +158,18 @@ bool esValidoLila(List<int> numeros, int nuevoNumero) =>
 bool esValidoBlanco(List<int> numeros, int nuevoNumero) =>
     TipoBlanco().esPosibleAgregar(numeros, nuevoNumero);
 
-bool esValidoNaranja(List<int> numeros, int nuevoNumero, {required bool esFilaSuperior}) =>
-    TipoNaranja(esFilaSuperior: esFilaSuperior).esPosibleAgregar(numeros, nuevoNumero);    
+bool esValidoNaranja(
+  List<int> numeros,
+  int nuevoNumero, {
+  required bool esFilaSuperior,
+}) =>
+    TipoNaranja(esFilaSuperior: esFilaSuperior)
+        .esPosibleAgregar(numeros, nuevoNumero);
 
 enum Region {
   rojoNoroeste,
   rojoSureste,
-  rojoNoreste,  
+  rojoNoreste,
   rojoSuroeste,
   amarillo,
   verdeNoroeste,
@@ -267,6 +272,119 @@ List<Celda> obtenerCeldasObjetivoValidas({
   }
 
   return validas;
+}
+
+String mensajeDadosNoLanzados() {
+  return 'Primero lanza los dados para comenzar tu turno.';
+}
+
+String mensajeSeleccionaAncla() {
+  return 'Selecciona una casilla con el valor de uno de tus dados para usar como ancla.';
+}
+
+String mensajeCasillaOcupada(int valor, {int? valorDado1, int? valorDado2}) {
+  final dados = <int>[?valorDado1, ?valorDado2];
+
+  if (dados.isEmpty) {
+    return 'Casilla ocupada. Esa casilla ya tiene un $valor.';
+  }
+
+  final opciones = dados.toSet().join(' o ');
+  return 'Casilla ocupada. Esa casilla tiene un $valor; para usarla como ancla debe coincidir con tus dados ($opciones).';
+}
+
+String mensajeSoloAdyacente() {
+  return 'Solo puedes colocar en una casilla adyacente al ancla.';
+}
+
+String mensajeAnclaSinOpciones(int valor) {
+  return 'El ancla no tiene casillas disponibles para colocar un $valor. Prueba con otra casilla o vuelve a lanzar los dados.';
+}
+
+String _nombreColorZona(Tipo tipo) {
+  if (tipo is TipoAzul) return 'azules';
+  if (tipo is TipoBlanco) return 'blancas';
+  if (tipo is TipoRojo) return 'rojas';
+  if (tipo is TipoAmarillo) return 'amarillas';
+  if (tipo is TipoMorado) return 'lilas';
+  if (tipo is TipoNaranja) return 'naranjas';
+  if (tipo is TipoVerde) return 'verdes';
+  return 'de esta zona';
+}
+
+String mensajeReglaZona({
+  required Tipo tipo,
+  required int valorAColocar,
+  required List<int> valoresActuales,
+}) {
+  final color = _nombreColorZona(tipo);
+
+  if (tipo is TipoAzul || tipo is TipoBlanco) {
+    final valoresDistintos = valoresActuales.toSet();
+    if (valoresDistintos.isNotEmpty) {
+      return 'En las casillas $color solo puedes poner números iguales. Esta zona ya tiene el ${valoresDistintos.first}.';
+    }
+    return 'En las casillas $color solo puedes poner números iguales.';
+  }
+
+  if (tipo is TipoRojo || tipo is TipoAmarillo) {
+    if (valoresActuales.contains(valorAColocar)) {
+      return 'En las casillas $color todos los números deben ser diferentes. El $valorAColocar ya está en esta zona.';
+    }
+    return 'En las casillas $color todos los números deben ser diferentes.';
+  }
+
+  if (tipo is TipoMorado) {
+    return 'En las casillas lilas puedes usar como máximo dos números distintos. El $valorAColocar sería un tercer valor.';
+  }
+
+  if (tipo is TipoNaranja) {
+    final ubicacion = tipo.esFilaSuperior ? 'superiores' : 'inferiores';
+    final rango = tipo.esFilaSuperior ? 'del 4 al 6' : 'del 1 al 3';
+    return 'En las casillas naranjas $ubicacion solo puedes poner números $rango.';
+  }
+
+  if (tipo is TipoVerde) {
+    return 'En las casillas verdes cualquier número es válido.';
+  }
+
+  return 'El $valorAColocar no cumple la regla de esta zona.';
+}
+
+String obtenerMensajeMovimientoInvalido({
+  required Tablero tablero,
+  required Celda celda,
+  required Celda? celdaAncla,
+  required int? valorAColocar,
+}) {
+  if (celda.valor != null) {
+    return mensajeCasillaOcupada(celda.valor!);
+  }
+
+  if (celdaAncla == null) {
+    return mensajeSeleccionaAncla();
+  }
+
+  final adyacentes = obtenerCeldasAdyacentes(tablero, celdaAncla);
+  if (!adyacentes.contains(celda)) {
+    return mensajeSoloAdyacente();
+  }
+
+  if (valorAColocar == null) {
+    return mensajeSeleccionaAncla();
+  }
+
+  final zona = tablero.obtenerZona(celda.region);
+  if (zona == null) {
+    return 'Esta casilla no tiene una regla de zona configurada.';
+  }
+
+  final valoresActuales = extraerValoresDeBloque(tablero.celdas, celda.region);
+  return mensajeReglaZona(
+    tipo: zona.tipo,
+    valorAColocar: valorAColocar,
+    valoresActuales: valoresActuales,
+  );
 }
 
 /// Calcula la puntuación total del tablero otorgando la puntuación de 1.er lugar al completar cada bloque al 100%.

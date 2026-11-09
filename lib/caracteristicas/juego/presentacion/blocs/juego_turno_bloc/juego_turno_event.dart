@@ -40,6 +40,16 @@ class EventoMovimientoRemotoRecibido extends JuegoTurnoEvento {
   EventoMovimientoRemotoRecibido(this.x, this.y, this.valor);
 }
 
+/// Evento al tocar una casilla que no es un ancla válida ni un objetivo permitido.
+class EventoMovimientoInvalido extends JuegoTurnoEvento {
+  final Celda celda;
+
+  EventoMovimientoInvalido(this.celda);
+}
+
+/// Evento para limpiar el mensaje didáctico cuando expire su temporizador.
+class EventoLimpiarMensajeAyuda extends JuegoTurnoEvento {}
+
 class EventoRendirse extends JuegoTurnoEvento {}
 
 class EventoRivalConcedio extends JuegoTurnoEvento {}

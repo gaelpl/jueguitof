@@ -8,6 +8,7 @@ class JuegoTurnoEstado {
   final Celda? celdaAncla;
   final List<Celda> celdasObjetivoValidas;
   final int puntuacionTotal;
+  final String? mensajeAyuda;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -17,6 +18,7 @@ class JuegoTurnoEstado {
     this.celdaAncla,
     this.celdasObjetivoValidas = const [],
     this.puntuacionTotal = 0,
+    this.mensajeAyuda,
   });
 
   /// Dado elegido para buscar la casilla Ancla en el tablero.
@@ -41,8 +43,10 @@ class JuegoTurnoEstado {
     Celda? celdaAncla,
     List<Celda>? celdasObjetivoValidas,
     int? puntuacionTotal,
+    String? mensajeAyuda,
     bool limpiarAncla = false,
     bool limpiarDados = false,
+    bool limpiarMensajeAyuda = false,
   }) {
     return JuegoTurnoEstado(
       tablero: tablero ?? this.tablero,
@@ -58,6 +62,9 @@ class JuegoTurnoEstado {
           ? const []
           : (celdasObjetivoValidas ?? this.celdasObjetivoValidas),
       puntuacionTotal: puntuacionTotal ?? this.puntuacionTotal,
+      mensajeAyuda: limpiarMensajeAyuda
+          ? null
+          : (mensajeAyuda ?? this.mensajeAyuda),
     );
   }
 }

@@ -467,59 +467,166 @@ void main() {
     );
   });
 
+  group('Mensajes didácticos de JuegoTurnoBloc', () {
+    late Tablero tablero;
+    late JuegoTurnoBloc bloc;
+
+    setUp(() {
+      final zonas = [
+        Zona(region: Region.azulNorte, tipo: TipoAzul()),
+        Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+      ];
+      final celdas = [
+        Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+        Celda(columna: 1, fila: 0, region: Region.azulNorte),
+        Celda(columna: 0, fila: 1, region: Region.verdeNoroeste),
+        Celda(columna: 2, fila: 0, region: Region.verdeNoroeste, valor: 1),
+        Celda(columna: 3, fila: 3, region: Region.verdeNoroeste),
+      ];
+      tablero = Tablero(alto: 7, ancho: 7, celdas: celdas, zonas: zonas);
+      bloc = JuegoTurnoBloc(
+        tablero,
+        duracionMensajeAyuda: const Duration(milliseconds: 40),
+      );
+    });
+
+    tearDown(() async {
+      await bloc.close();
+    });
+
+    Future<void> lanzarDados() async {
+      bloc.add(
+        EventoLanzarDados(
+          dado1Forzado: const Dado(3),
+          dado2Forzado: const Dado(5),
+        ),
+      );
+      await pumpEventQueue();
+    }
+
+    test('avisa que primero debe lanzar los dados', () async {
+      bloc.add(EventoMovimientoInvalido(tablero.obtenerCeldaEn(1, 0)!));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, mensajeDadosNoLanzados());
+    });
+
+    test('explica la regla de las casillas azules', () async {
+      await lanzarDados();
+
+      bloc.add(EventoSeleccionarDadoAncla(0));
+      await pumpEventQueue();
+
+      bloc.add(EventoSeleccionarAnclaTablero(tablero.obtenerCeldaEn(0, 0)!));
+      await pumpEventQueue();
+
+      bloc.add(EventoMovimientoInvalido(tablero.obtenerCeldaEn(1, 0)!));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, contains('azules'));
+      expect(bloc.state.mensajeAyuda, contains('iguales'));
+    });
+
+    test('explica que una casilla ocupada no coincide con los dados', () async {
+      await lanzarDados();
+
+      bloc.add(EventoSeleccionarAnclaTablero(tablero.obtenerCeldaEn(2, 0)!));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, contains('Casilla ocupada'));
+      expect(bloc.state.mensajeAyuda, contains('1'));
+    });
+
+    test('explica que solo se puede colocar junto al ancla', () async {
+      await lanzarDados();
+
+      bloc.add(EventoSeleccionarDadoAncla(0));
+      await pumpEventQueue();
+
+      bloc.add(EventoSeleccionarAnclaTablero(tablero.obtenerCeldaEn(0, 0)!));
+      await pumpEventQueue();
+
+      bloc.add(EventoMovimientoInvalido(tablero.obtenerCeldaEn(3, 3)!));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, contains('adyacente'));
+    });
+
+    test('limpia automáticamente el mensaje de ayuda', () async {
+      bloc.add(EventoMovimientoInvalido(tablero.obtenerCeldaEn(1, 0)!));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, isNotNull);
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
+
+      expect(bloc.state.mensajeAyuda, isNull);
+    });
+  });
+
   group('Regla Blanco (todos idénticos, 8/6/4 pts)', () {
-  final tipo = TipoBlanco();
+    final tipo = TipoBlanco();
 
-  test('permite colocar si la lista está vacía o si el número es idéntico', () {
-    expect(tipo.esPosibleAgregar([], 5), isTrue);
-    expect(tipo.esPosibleAgregar([5, 5], 5), isTrue);
-    expect(tipo.esPosibleAgregar([5, 5], 3), isFalse);
-  });
+    test(
+      'permite colocar si la lista está vacía o si el número es idéntico',
+      () {
+        expect(tipo.esPosibleAgregar([], 5), isTrue);
+        expect(tipo.esPosibleAgregar([5, 5], 5), isTrue);
+        expect(tipo.esPosibleAgregar([5, 5], 3), isFalse);
+      },
+    );
 
-  test('puntuación otorga 8 pts al completar 1.er lugar', () {
-    expect(tipo.puntuaciones[1], equals(8));
-  });
-});
-
-group('Regla Naranja (4-6 arriba / 1-3 abajo, 6/4/3 pts)', () {
-  final tipoArriba = TipoNaranja(esFilaSuperior: true);
-  final tipoAbajo = TipoNaranja(esFilaSuperior: false);
-
-  test('fila superior solo permite 4, 5 y 6', () {
-    expect(tipoArriba.esPosibleAgregar([], 4), isTrue);
-    expect(tipoArriba.esPosibleAgregar([], 6), isTrue);
-    expect(tipoArriba.esPosibleAgregar([], 3), isFalse);
-  });
-
-  test('fila inferior solo permite 1, 2 y 3', () {
-    expect(tipoAbajo.esPosibleAgregar([], 1), isTrue);
-    expect(tipoAbajo.esPosibleAgregar([], 3), isTrue);
-    expect(tipoAbajo.esPosibleAgregar([], 4), isFalse);
-  });
-
-  test('puntuación otorga 6 pts al completar 1.er lugar', () {
-    expect(tipoArriba.puntuaciones[1], equals(6));
-  });
-});
-
-group('CreadorMapas (Fabrica de Mapas 1-4)', () {
-    test('genera los 4 mapas oficiales con 49 celdas y 6 estrellas cada uno', () {
-      for (int i = 1; i <= 4; i++) {
-        final tablero = CreadorMapas.obtenerMapa(i);
-        expect(tablero.celdas.length, equals(49));
-        expect(tablero.obtenerCeldasEstrella().length, equals(6));
-      }
+    test('puntuación otorga 8 pts al completar 1.er lugar', () {
+      expect(tipo.puntuaciones[1], equals(8));
     });
-    test('Mapa 4 configura adecuadamente sus 4 bloques rojos y 2 zonas naranjas', () {
-      final mapa4 = CreadorMapas.mapa4();
+  });
 
-      expect(mapa4.obtenerZona(Region.naranjaNorte), isNotNull);
-      expect(mapa4.obtenerZona(Region.naranjaSur), isNotNull);
-      expect(mapa4.obtenerZona(Region.rojoNoroeste), isNotNull);
-      expect(mapa4.obtenerZona(Region.rojoNoreste), isNotNull);
-      expect(mapa4.obtenerZona(Region.rojoSuroeste), isNotNull);
-      expect(mapa4.obtenerZona(Region.rojoSureste), isNotNull);
+  group('Regla Naranja (4-6 arriba / 1-3 abajo, 6/4/3 pts)', () {
+    final tipoArriba = TipoNaranja(esFilaSuperior: true);
+    final tipoAbajo = TipoNaranja(esFilaSuperior: false);
+
+    test('fila superior solo permite 4, 5 y 6', () {
+      expect(tipoArriba.esPosibleAgregar([], 4), isTrue);
+      expect(tipoArriba.esPosibleAgregar([], 6), isTrue);
+      expect(tipoArriba.esPosibleAgregar([], 3), isFalse);
     });
+
+    test('fila inferior solo permite 1, 2 y 3', () {
+      expect(tipoAbajo.esPosibleAgregar([], 1), isTrue);
+      expect(tipoAbajo.esPosibleAgregar([], 3), isTrue);
+      expect(tipoAbajo.esPosibleAgregar([], 4), isFalse);
+    });
+
+    test('puntuación otorga 6 pts al completar 1.er lugar', () {
+      expect(tipoArriba.puntuaciones[1], equals(6));
+    });
+  });
+
+  group('CreadorMapas (Fabrica de Mapas 1-4)', () {
+    test(
+      'genera los 4 mapas oficiales con 49 celdas y 6 estrellas cada uno',
+      () {
+        for (int i = 1; i <= 4; i++) {
+          final tablero = CreadorMapas.obtenerMapa(i);
+          expect(tablero.celdas.length, equals(49));
+          expect(tablero.obtenerCeldasEstrella().length, equals(6));
+        }
+      },
+    );
+    test(
+      'Mapa 4 configura adecuadamente sus 4 bloques rojos y 2 zonas naranjas',
+      () {
+        final mapa4 = CreadorMapas.mapa4();
+
+        expect(mapa4.obtenerZona(Region.naranjaNorte), isNotNull);
+        expect(mapa4.obtenerZona(Region.naranjaSur), isNotNull);
+        expect(mapa4.obtenerZona(Region.rojoNoroeste), isNotNull);
+        expect(mapa4.obtenerZona(Region.rojoNoreste), isNotNull);
+        expect(mapa4.obtenerZona(Region.rojoSuroeste), isNotNull);
+        expect(mapa4.obtenerZona(Region.rojoSureste), isNotNull);
+      },
+    );
   });
 
   group('InicioJuegoBloc (Restricciones de Zona en Estrellas)', () {

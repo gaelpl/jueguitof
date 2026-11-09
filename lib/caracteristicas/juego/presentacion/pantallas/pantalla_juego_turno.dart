@@ -66,6 +66,29 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
               child: Column(
                 children: [
                   if (_conexionInestable) _construirBannerConexion(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final deslizamiento = Tween<Offset>(
+                        begin: const Offset(0, -0.2),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: deslizamiento,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: state.mensajeAyuda == null
+                        ? const SizedBox.shrink(
+                            key: ValueKey('sin-mensaje-ayuda'),
+                          )
+                        : _construirBannerAyuda(state.mensajeAyuda!),
+                  ),
                   Container(
                     margin: const EdgeInsets.all(12),
                     padding: const EdgeInsets.symmetric(
@@ -139,6 +162,10 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                   } else if (esObjetivoValido) {
                                     context.read<JuegoTurnoBloc>().add(
                                       EventoColocarNumeroEnObjetivo(celda),
+                                    );
+                                  } else {
+                                    context.read<JuegoTurnoBloc>().add(
+                                      EventoMovimientoInvalido(celda),
                                     );
                                   }
                                 },
@@ -330,6 +357,49 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirBannerAyuda(String mensaje) {
+    return Container(
+      key: ValueKey(mensaje),
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFC7D2FE)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF312E81).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.lightbulb_outline_rounded,
+            color: Color(0xFF4338CA),
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              mensaje,
+              style: const TextStyle(
+                color: Color(0xFF312E81),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
               ),
             ),
           ),

@@ -13,6 +13,8 @@ export 'juego_turno_state.dart';
 class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final ServicioSocket _servicioSocket;
   final String? _codigoSala;
+  final Duration _duracionMensajeAyuda;
+  Timer? _temporizadorMensajeAyuda;
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
@@ -22,8 +24,11 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     Tablero tableroInicial, {
     ServicioSocket? servicioSocket,
     String? codigoSala,
+    Duration? duracionMensajeAyuda,
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
+       _duracionMensajeAyuda =
+           duracionMensajeAyuda ?? const Duration(seconds: 4),
        super(
          JuegoTurnoEstado(
            tablero: tableroInicial,
@@ -36,6 +41,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoColocarNumeroEnObjetivo>(_onColocarNumeroEnObjetivo);
     on<EventoLimpiarSeleccionAncla>(_onLimpiarSeleccionAncla);
     on<EventoMovimientoRemotoRecibido>(_onMovimientoRemotoRecibido);
+    on<EventoMovimientoInvalido>(_onMovimientoInvalido);
+    on<EventoLimpiarMensajeAyuda>(_onLimpiarMensajeAyuda);
     on<EventoRendirse>(_onRendirse);
     on<EventoRivalConcedio>(_onRivalConcedio);
     on<EventoRivalDesconectado>(_onRivalDesconectado);
@@ -67,7 +74,14 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     final d1 = event.dado1Forzado ?? Dado.lanzar();
     final d2 = event.dado2Forzado ?? Dado.lanzar();
 
-    emit(state.copyWith(dado1: d1, dado2: d2, limpiarAncla: true));
+    emit(
+      state.copyWith(
+        dado1: d1,
+        dado2: d2,
+        limpiarAncla: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
   }
 
   void _onSeleccionarDadoAncla(
@@ -78,7 +92,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       emit(
         state.copyWith(
           indiceDadoAncla: event.indiceDadoAncla,
-          limpiarAncla: true, // Limpia el ancla anterior al cambiar de dado
+          limpiarAncla: true,
+          limpiarMensajeAyuda: true,
         ),
       );
     }
@@ -88,40 +103,60 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoSeleccionarAnclaTablero event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
-    // Si aún no se ha elegido explícitamente el dado de ancla, elegimos por defecto el dado 1
+    if (state.dado1 == null || state.dado2 == null) {
+      _mostrarMensajeAyuda(mensajeDadosNoLanzados(), emit);
+      return;
+    }
+
+    if (event.celdaAncla.valor == null) {
+      _mostrarMensajeAyuda(mensajeSeleccionaAncla(), emit);
+      return;
+    }
+
     int indiceAncla = state.indiceDadoAncla ?? 0;
 
-    // Si la celda tocada coincide con el valor del dado 2 pero teníamos el dado 1,
-    // auto-seleccionamos el dado que coincide con la celda tocada
-    if (state.dado1 != null && state.dado2 != null) {
-      if (event.celdaAncla.valor == state.dado2!.valor &&
-          event.celdaAncla.valor != state.dado1!.valor) {
-        indiceAncla = 1;
-      } else if (event.celdaAncla.valor == state.dado1!.valor &&
-          event.celdaAncla.valor != state.dado2!.valor) {
-        indiceAncla = 0;
-      }
+    if (event.celdaAncla.valor == state.dado2!.valor &&
+        event.celdaAncla.valor != state.dado1!.valor) {
+      indiceAncla = 1;
+    } else if (event.celdaAncla.valor == state.dado1!.valor &&
+        event.celdaAncla.valor != state.dado2!.valor) {
+      indiceAncla = 0;
     }
 
     final dAncla = indiceAncla == 0 ? state.dado1 : state.dado2;
     final dColocar = indiceAncla == 0 ? state.dado2 : state.dado1;
 
-    if (dAncla != null &&
-        dColocar != null &&
-        event.celdaAncla.valor == dAncla.valor) {
-      final validas = obtenerCeldasObjetivoValidas(
-        tablero: state.tablero,
-        celdaAncla: event.celdaAncla,
-        valorAColocar: dColocar.valor,
-      );
-
-      emit(
-        state.copyWith(
-          indiceDadoAncla: indiceAncla,
-          celdaAncla: event.celdaAncla,
-          celdasObjetivoValidas: validas,
+    if (dAncla == null ||
+        dColocar == null ||
+        event.celdaAncla.valor != dAncla.valor) {
+      _mostrarMensajeAyuda(
+        mensajeCasillaOcupada(
+          event.celdaAncla.valor!,
+          valorDado1: state.dado1?.valor,
+          valorDado2: state.dado2?.valor,
         ),
+        emit,
       );
+      return;
+    }
+
+    final validas = obtenerCeldasObjetivoValidas(
+      tablero: state.tablero,
+      celdaAncla: event.celdaAncla,
+      valorAColocar: dColocar.valor,
+    );
+
+    emit(
+      state.copyWith(
+        indiceDadoAncla: indiceAncla,
+        celdaAncla: event.celdaAncla,
+        celdasObjetivoValidas: validas,
+        limpiarMensajeAyuda: validas.isNotEmpty,
+      ),
+    );
+
+    if (validas.isEmpty) {
+      _mostrarMensajeAyuda(mensajeAnclaSinOpciones(dColocar.valor), emit);
     }
   }
 
@@ -131,27 +166,43 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   ) {
     final dColocar = state.dadoColocar;
 
-    if (dColocar != null &&
-        state.celdasObjetivoValidas.contains(event.celdaObjetivo)) {
-      event.celdaObjetivo.asignarValor(dColocar.valor);
-
-      final nuevoPuntaje = calcularPuntuacionTotal(state.tablero);
-
-      emit(
-        state.copyWith(
-          tablero: state.tablero,
-          puntuacionTotal: nuevoPuntaje,
-          limpiarAncla: true,
-          limpiarDados: true,
-        ),
-      );
-
-      _emitirMovimiento(
-        event.celdaObjetivo.columna,
-        event.celdaObjetivo.fila,
-        dColocar.valor,
-      );
+    if (dColocar == null) {
+      _mostrarMensajeAyuda(mensajeDadosNoLanzados(), emit);
+      return;
     }
+
+    if (!state.celdasObjetivoValidas.contains(event.celdaObjetivo)) {
+      _mostrarMensajeAyuda(
+        obtenerMensajeMovimientoInvalido(
+          tablero: state.tablero,
+          celda: event.celdaObjetivo,
+          celdaAncla: state.celdaAncla,
+          valorAColocar: dColocar.valor,
+        ),
+        emit,
+      );
+      return;
+    }
+
+    event.celdaObjetivo.asignarValor(dColocar.valor);
+
+    final nuevoPuntaje = calcularPuntuacionTotal(state.tablero);
+
+    emit(
+      state.copyWith(
+        tablero: state.tablero,
+        puntuacionTotal: nuevoPuntaje,
+        limpiarAncla: true,
+        limpiarDados: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
+
+    _emitirMovimiento(
+      event.celdaObjetivo.columna,
+      event.celdaObjetivo.fila,
+      dColocar.valor,
+    );
   }
 
   void _onMovimientoRemotoRecibido(
@@ -169,6 +220,48 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         puntuacionTotal: calcularPuntuacionTotal(state.tablero),
       ),
     );
+  }
+
+  void _onMovimientoInvalido(
+    EventoMovimientoInvalido event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    if (state.dado1 == null || state.dado2 == null) {
+      _mostrarMensajeAyuda(mensajeDadosNoLanzados(), emit);
+      return;
+    }
+
+    _mostrarMensajeAyuda(
+      obtenerMensajeMovimientoInvalido(
+        tablero: state.tablero,
+        celda: event.celda,
+        celdaAncla: state.celdaAncla,
+        valorAColocar: state.dadoColocar?.valor,
+      ),
+      emit,
+    );
+  }
+
+  void _onLimpiarMensajeAyuda(
+    EventoLimpiarMensajeAyuda event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    _temporizadorMensajeAyuda?.cancel();
+    _temporizadorMensajeAyuda = null;
+
+    if (state.mensajeAyuda == null) return;
+
+    emit(state.copyWith(limpiarMensajeAyuda: true));
+  }
+
+  void _mostrarMensajeAyuda(String mensaje, Emitter<JuegoTurnoEstado> emit) {
+    _temporizadorMensajeAyuda?.cancel();
+    emit(state.copyWith(mensajeAyuda: mensaje));
+    _temporizadorMensajeAyuda = Timer(_duracionMensajeAyuda, () {
+      if (!isClosed) {
+        add(EventoLimpiarMensajeAyuda());
+      }
+    });
   }
 
   void _onLimpiarSeleccionAncla(
@@ -247,6 +340,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
   @override
   Future<void> close() async {
+    _temporizadorMensajeAyuda?.cancel();
+    _temporizadorMensajeAyuda = null;
     await _suscripcionMovimiento.cancel();
     await _suscripcionRivalConcedio.cancel();
     await _suscripcionRivalDesconectado.cancel();
