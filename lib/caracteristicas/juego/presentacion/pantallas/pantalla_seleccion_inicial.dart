@@ -51,6 +51,10 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                   builder: (_) => PantallaJuegoTurno(
                     tablero: state.tablero,
                     codigoSala: widget.codigoSala,
+                    jugadores: widget.jugadores,
+                    puntosParaGanar: widget.puntosParaGanar,
+                    tuSocketId: widget.tuSocketId,
+                    anfitrion: widget.anfitrion,
                   ),
                 ),
               );

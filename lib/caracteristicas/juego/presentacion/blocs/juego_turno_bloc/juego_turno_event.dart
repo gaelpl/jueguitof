@@ -1,3 +1,4 @@
+import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/logica/juego_logica.dart';
 
 abstract class JuegoTurnoEvento {}
@@ -55,3 +56,39 @@ class EventoRendirse extends JuegoTurnoEvento {}
 class EventoRivalConcedio extends JuegoTurnoEvento {}
 
 class EventoRivalDesconectado extends JuegoTurnoEvento {}
+
+class EventoPuntuacionesActualizadas extends JuegoTurnoEvento {
+  final List<JugadorPartida> jugadores;
+  final int? puntosParaGanar;
+
+  EventoPuntuacionesActualizadas({
+    required this.jugadores,
+    this.puntosParaGanar,
+  });
+}
+
+class EventoPartidaGanada extends JuegoTurnoEvento {
+  final String? ganadorSocketId;
+  final String? ganadorUsuario;
+  final List<JugadorPartida> jugadores;
+  final int? puntosParaGanar;
+
+  EventoPartidaGanada({
+    this.ganadorSocketId,
+    this.ganadorUsuario,
+    this.jugadores = const [],
+    this.puntosParaGanar,
+  });
+}
+
+class EventoJugadorSalio extends JuegoTurnoEvento {
+  final String usuario;
+  final bool fueDesconexion;
+  final List<JugadorPartida> jugadores;
+
+  EventoJugadorSalio({
+    required this.usuario,
+    required this.fueDesconexion,
+    this.jugadores = const [],
+  });
+}

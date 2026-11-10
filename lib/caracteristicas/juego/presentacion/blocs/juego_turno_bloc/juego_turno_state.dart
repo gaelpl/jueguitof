@@ -1,3 +1,4 @@
+import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/logica/juego_logica.dart';
 
 class JuegoTurnoEstado {
@@ -9,6 +10,9 @@ class JuegoTurnoEstado {
   final List<Celda> celdasObjetivoValidas;
   final int puntuacionTotal;
   final String? mensajeAyuda;
+  final List<JugadorPartida> jugadores;
+  final int? puntosParaGanar;
+  final String? tuSocketId;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -19,6 +23,9 @@ class JuegoTurnoEstado {
     this.celdasObjetivoValidas = const [],
     this.puntuacionTotal = 0,
     this.mensajeAyuda,
+    this.jugadores = const [],
+    this.puntosParaGanar,
+    this.tuSocketId,
   });
 
   /// Dado elegido para buscar la casilla Ancla en el tablero.
@@ -44,6 +51,9 @@ class JuegoTurnoEstado {
     List<Celda>? celdasObjetivoValidas,
     int? puntuacionTotal,
     String? mensajeAyuda,
+    List<JugadorPartida>? jugadores,
+    int? puntosParaGanar,
+    String? tuSocketId,
     bool limpiarAncla = false,
     bool limpiarDados = false,
     bool limpiarMensajeAyuda = false,
@@ -65,6 +75,9 @@ class JuegoTurnoEstado {
       mensajeAyuda: limpiarMensajeAyuda
           ? null
           : (mensajeAyuda ?? this.mensajeAyuda),
+      jugadores: jugadores ?? this.jugadores,
+      puntosParaGanar: puntosParaGanar ?? this.puntosParaGanar,
+      tuSocketId: tuSocketId ?? this.tuSocketId,
     );
   }
 }
@@ -78,6 +91,10 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.celdaAncla,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
+    super.mensajeAyuda,
+    super.jugadores,
+    super.puntosParaGanar,
+    super.tuSocketId,
   });
 }
 
@@ -90,5 +107,32 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.celdaAncla,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
+    super.mensajeAyuda,
+    super.jugadores,
+    super.puntosParaGanar,
+    super.tuSocketId,
+  });
+}
+
+class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
+  final String? ganadorSocketId;
+  final String? ganadorUsuario;
+  final bool esGanadorLocal;
+
+  const JuegoFinalizadoPorPuntos({
+    required super.tablero,
+    super.dado1,
+    super.dado2,
+    super.indiceDadoAncla,
+    super.celdaAncla,
+    super.celdasObjetivoValidas,
+    super.puntuacionTotal,
+    super.mensajeAyuda,
+    super.jugadores,
+    super.puntosParaGanar,
+    super.tuSocketId,
+    required this.ganadorSocketId,
+    required this.ganadorUsuario,
+    required this.esGanadorLocal,
   });
 }

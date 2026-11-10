@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../datos/servicios/servicio_socket.dart';
+import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/logica/juego_logica.dart';
 import 'juego_turno_event.dart';
 import 'juego_turno_state.dart';
@@ -14,25 +15,40 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final ServicioSocket _servicioSocket;
   final String? _codigoSala;
   final Duration _duracionMensajeAyuda;
+  String? _tuSocketId;
   Timer? _temporizadorMensajeAyuda;
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
   late final StreamSubscription<bool> _suscripcionRivalDesconectado;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionPuntuacionesActualizadas;
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionPartidaGanada;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionJugadorConcedio;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionJugadorDesconectado;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
     ServicioSocket? servicioSocket,
     String? codigoSala,
     Duration? duracionMensajeAyuda,
+    List<JugadorPartida> jugadores = const [],
+    int? puntosParaGanar,
+    String? tuSocketId,
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
+       _tuSocketId = tuSocketId,
        _duracionMensajeAyuda =
            duracionMensajeAyuda ?? const Duration(seconds: 4),
        super(
          JuegoTurnoEstado(
            tablero: tableroInicial,
            puntuacionTotal: calcularPuntuacionTotal(tableroInicial),
+           jugadores: jugadores,
+           puntosParaGanar: puntosParaGanar,
+           tuSocketId: tuSocketId,
          ),
        ) {
     on<EventoLanzarDados>(_onLanzarDados);
@@ -46,6 +62,9 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoRendirse>(_onRendirse);
     on<EventoRivalConcedio>(_onRivalConcedio);
     on<EventoRivalDesconectado>(_onRivalDesconectado);
+    on<EventoPuntuacionesActualizadas>(_onPuntuacionesActualizadas);
+    on<EventoPartidaGanada>(_onPartidaGanada);
+    on<EventoJugadorSalio>(_onJugadorSalio);
 
     _suscripcionMovimiento = _servicioSocket.movimientoRecibido.listen((datos) {
       final int? x = _comoEntero(datos['x'] ?? datos['columna']);
@@ -65,8 +84,59 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       (_) => add(EventoRivalDesconectado()),
     );
 
+    _suscripcionPuntuacionesActualizadas = _servicioSocket
+        .puntuacionesActualizadas
+        .listen((datos) {
+          add(
+            EventoPuntuacionesActualizadas(
+              jugadores: _parsearJugadores(datos['jugadores']),
+              puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
+            ),
+          );
+        });
+
+    _suscripcionPartidaGanada = _servicioSocket.partidaGanada.listen((datos) {
+      final dynamic ganador = datos['ganador'];
+      final Map<String, dynamic>? ganadorMap = ganador is Map
+          ? Map<String, dynamic>.from(ganador)
+          : null;
+
+      add(
+        EventoPartidaGanada(
+          ganadorSocketId: ganadorMap?['socketId']?.toString(),
+          ganadorUsuario: ganadorMap?['usuario']?.toString(),
+          jugadores: _parsearJugadores(datos['jugadores']),
+          puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
+        ),
+      );
+    });
+
+    _suscripcionJugadorConcedio = _servicioSocket.jugadorConcedio.listen((
+      datos,
+    ) {
+      add(
+        EventoJugadorSalio(
+          usuario: _nombreJugador(datos),
+          fueDesconexion: false,
+          jugadores: _parsearJugadores(datos['jugadores']),
+        ),
+      );
+    });
+
+    _suscripcionJugadorDesconectado = _servicioSocket.jugadorDesconectado
+        .listen((datos) {
+          add(
+            EventoJugadorSalio(
+              usuario: _nombreJugador(datos),
+              fueDesconexion: true,
+              jugadores: _parsearJugadores(datos['jugadores']),
+            ),
+          );
+        });
+
     if (_codigoSala != null) {
       _servicioSocket.iniciarPartida();
+      _tuSocketId ??= _servicioSocket.idActual;
     }
   }
 
@@ -187,11 +257,20 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     event.celdaObjetivo.asignarValor(dColocar.valor);
 
     final nuevoPuntaje = calcularPuntuacionTotal(state.tablero);
+    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final List<JugadorPartida> jugadoresActualizados = state.jugadores
+        .map(
+          (jugador) => jugador.socketId == tuSocketId
+              ? jugador.copyWith(puntuacion: nuevoPuntaje)
+              : jugador,
+        )
+        .toList();
 
     emit(
       state.copyWith(
         tablero: state.tablero,
         puntuacionTotal: nuevoPuntaje,
+        jugadores: jugadoresActualizados,
         limpiarAncla: true,
         limpiarDados: true,
         limpiarMensajeAyuda: true,
@@ -203,6 +282,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       event.celdaObjetivo.fila,
       dColocar.valor,
     );
+    _emitirPuntuacion(nuevoPuntaje);
   }
 
   void _onMovimientoRemotoRecibido(
@@ -217,7 +297,9 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     emit(
       state.copyWith(
         tablero: state.tablero,
-        puntuacionTotal: calcularPuntuacionTotal(state.tablero),
+        puntuacionTotal: state.jugadores.isEmpty
+            ? calcularPuntuacionTotal(state.tablero)
+            : state.puntuacionTotal,
       ),
     );
   }
@@ -285,6 +367,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoRivalConcedio event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (state is JuegoFinalizadoPorPuntos) return;
+
     _servicioSocket.finalizarPartida();
     emit(
       JuegoGanadoPorAbandono(
@@ -295,6 +379,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         celdaAncla: state.celdaAncla,
         celdasObjetivoValidas: state.celdasObjetivoValidas,
         puntuacionTotal: state.puntuacionTotal,
+        mensajeAyuda: state.mensajeAyuda,
+        jugadores: state.jugadores,
+        puntosParaGanar: state.puntosParaGanar,
+        tuSocketId: state.tuSocketId,
       ),
     );
   }
@@ -303,6 +391,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoRivalDesconectado event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (state is JuegoFinalizadoPorPuntos) return;
+
     _servicioSocket.finalizarPartida();
     emit(
       JuegoCanceladoDesconexion(
@@ -313,8 +403,126 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         celdaAncla: state.celdaAncla,
         celdasObjetivoValidas: state.celdasObjetivoValidas,
         puntuacionTotal: state.puntuacionTotal,
+        mensajeAyuda: state.mensajeAyuda,
+        jugadores: state.jugadores,
+        puntosParaGanar: state.puntosParaGanar,
+        tuSocketId: state.tuSocketId,
       ),
     );
+  }
+
+  void _onPuntuacionesActualizadas(
+    EventoPuntuacionesActualizadas event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final JugadorPartida? jugadorLocal = _buscarJugador(
+      event.jugadores,
+      tuSocketId,
+    );
+
+    emit(
+      state.copyWith(
+        jugadores: event.jugadores,
+        puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
+        tuSocketId: tuSocketId,
+        puntuacionTotal: jugadorLocal?.puntuacion ?? state.puntuacionTotal,
+      ),
+    );
+  }
+
+  void _onPartidaGanada(
+    EventoPartidaGanada event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final bool esGanadorLocal =
+        event.ganadorSocketId != null && event.ganadorSocketId == tuSocketId;
+
+    _servicioSocket.finalizarPartida();
+    emit(
+      JuegoFinalizadoPorPuntos(
+        tablero: state.tablero,
+        dado1: state.dado1,
+        dado2: state.dado2,
+        indiceDadoAncla: state.indiceDadoAncla,
+        celdaAncla: state.celdaAncla,
+        celdasObjetivoValidas: state.celdasObjetivoValidas,
+        puntuacionTotal: state.puntuacionTotal,
+        mensajeAyuda: state.mensajeAyuda,
+        jugadores: event.jugadores.isEmpty ? state.jugadores : event.jugadores,
+        puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
+        tuSocketId: tuSocketId,
+        ganadorSocketId: event.ganadorSocketId,
+        ganadorUsuario: event.ganadorUsuario,
+        esGanadorLocal: esGanadorLocal,
+      ),
+    );
+  }
+
+  void _onJugadorSalio(
+    EventoJugadorSalio event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    if (state is JuegoFinalizadoPorPuntos) return;
+
+    final List<JugadorPartida> jugadores = event.jugadores.isEmpty
+        ? state.jugadores
+        : event.jugadores;
+    final String mensaje = event.fueDesconexion
+        ? '${event.usuario} se desconectó. La partida continúa.'
+        : '${event.usuario} se rindió. La partida continúa.';
+
+    _temporizadorMensajeAyuda?.cancel();
+    emit(state.copyWith(jugadores: jugadores, mensajeAyuda: mensaje));
+    _temporizadorMensajeAyuda = Timer(_duracionMensajeAyuda, () {
+      if (!isClosed) {
+        add(EventoLimpiarMensajeAyuda());
+      }
+    });
+  }
+
+  void _emitirPuntuacion(int puntuacion) {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.actualizarPuntuacion(_codigoSala, puntuacion);
+    } catch (_) {
+      return;
+    }
+  }
+
+  List<JugadorPartida> _parsearJugadores(dynamic valor) {
+    if (valor is! List) return const [];
+
+    return valor
+        .whereType<Map>()
+        .map(
+          (jugador) =>
+              JugadorPartida.desdeJson(Map<String, dynamic>.from(jugador)),
+        )
+        .toList();
+  }
+
+  JugadorPartida? _buscarJugador(
+    List<JugadorPartida> jugadores,
+    String? socketId,
+  ) {
+    if (socketId == null) return null;
+
+    for (final JugadorPartida jugador in jugadores) {
+      if (jugador.socketId == socketId) return jugador;
+    }
+
+    return null;
+  }
+
+  String _nombreJugador(Map<String, dynamic> datos) {
+    final dynamic jugador = datos['jugador'];
+    if (jugador is Map && jugador['usuario'] != null) {
+      return jugador['usuario'].toString();
+    }
+    return 'Un jugador';
   }
 
   void _emitirMovimiento(int x, int y, int valor) {
@@ -345,6 +553,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     await _suscripcionMovimiento.cancel();
     await _suscripcionRivalConcedio.cancel();
     await _suscripcionRivalDesconectado.cancel();
+    await _suscripcionPuntuacionesActualizadas.cancel();
+    await _suscripcionPartidaGanada.cancel();
+    await _suscripcionJugadorConcedio.cancel();
+    await _suscripcionJugadorDesconectado.cancel();
     if (_codigoSala != null) {
       _servicioSocket.finalizarPartida();
     }

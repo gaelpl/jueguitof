@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../nucleo/tema/colores_region.dart';
 import '../../datos/servicios/servicio_socket.dart';
+import '../../dominio/entidades/jugador_partida.dart';
 import '../../dominio/logica/juego_logica.dart';
 import '../blocs/juego_turno_bloc/juego_turno_bloc.dart';
 import 'pantalla_menu_mapas.dart';
@@ -13,8 +14,20 @@ import 'pantalla_menu_mapas.dart';
 class PantallaJuegoTurno extends StatefulWidget {
   final Tablero tablero;
   final String? codigoSala;
+  final List<JugadorPartida> jugadores;
+  final int? puntosParaGanar;
+  final String? tuSocketId;
+  final String? anfitrion;
 
-  const PantallaJuegoTurno({super.key, required this.tablero, this.codigoSala});
+  const PantallaJuegoTurno({
+    super.key,
+    required this.tablero,
+    this.codigoSala,
+    this.jugadores = const [],
+    this.puntosParaGanar,
+    this.tuSocketId,
+    this.anfitrion,
+  });
 
   @override
   State<PantallaJuegoTurno> createState() => _PantallaJuegoTurnoState();
@@ -45,8 +58,13 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          JuegoTurnoBloc(widget.tablero, codigoSala: widget.codigoSala),
+      create: (_) => JuegoTurnoBloc(
+        widget.tablero,
+        codigoSala: widget.codigoSala,
+        jugadores: widget.jugadores,
+        puntosParaGanar: widget.puntosParaGanar,
+        tuSocketId: widget.tuSocketId,
+      ),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Brilliant - Partida'),
@@ -59,6 +77,9 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             }
             if (state is JuegoCanceladoDesconexion) {
               _mostrarDialogoDesconexion(context);
+            }
+            if (state is JuegoFinalizadoPorPuntos) {
+              _mostrarDialogoVictoriaPorPuntos(context, state);
             }
           },
           builder: (context, state) {
@@ -89,38 +110,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                           )
                         : _construirBannerAyuda(state.mensajeAyuda!),
                   ),
-                  Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade300),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Puntuación:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${state.puntuacionTotal} pts',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _construirMarcador(context, state),
 
                   Expanded(
                     child: AbsorbPointer(
@@ -335,6 +325,141 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
     );
   }
 
+  Widget _construirMarcador(BuildContext context, JuegoTurnoEstado state) {
+    if (state.jugadores.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.shade300),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Puntuación:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '${state.puntuacionTotal} pts',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final String? tuSocketId = state.tuSocketId ?? widget.tuSocketId;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Marcador',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              if (state.puntosParaGanar != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Text(
+                    'Meta: ${state.puntosParaGanar} pts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final JugadorPartida jugador in state.jugadores)
+                  _construirTarjetaJugador(
+                    jugador,
+                    jugador.socketId == tuSocketId,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirTarjetaJugador(JugadorPartida jugador, bool esLocal) {
+    return Container(
+      width: 132,
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: esLocal ? Colors.blue.shade50 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: esLocal ? Colors.blue.shade300 : Colors.grey.shade300,
+          width: esLocal ? 1.6 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  jugador.usuario,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: esLocal ? FontWeight.w800 : FontWeight.w600,
+                    color: esLocal ? Colors.blue.shade900 : Colors.black87,
+                  ),
+                ),
+              ),
+              if (esLocal)
+                Icon(
+                  Icons.person_rounded,
+                  size: 14,
+                  color: Colors.blue.shade700,
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${jugador.puntuacion} pts',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: esLocal ? Colors.blue.shade900 : Colors.indigo.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _construirBannerConexion() {
     return Container(
       width: double.infinity,
@@ -402,6 +527,39 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                 height: 1.35,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarDialogoVictoriaPorPuntos(
+    BuildContext context,
+    JuegoFinalizadoPorPuntos estado,
+  ) {
+    final String titulo = estado.esGanadorLocal
+        ? '¡Has ganado!'
+        : 'Partida finalizada';
+    final String contenido = estado.esGanadorLocal
+        ? 'Alcanzaste la meta de ${estado.puntosParaGanar} puntos.'
+        : '${estado.ganadorUsuario ?? "Un jugador"} alcanzó la meta de ${estado.puntosParaGanar} puntos.';
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(titulo),
+        content: Text(contenido),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const PantallaMenuMapas()),
+                (route) => false,
+              );
+            },
+            child: const Text('Volver al menú de mapas'),
           ),
         ],
       ),

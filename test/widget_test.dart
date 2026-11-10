@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:jueguitof/caracteristicas/juego/dominio/entidades/jugador_partida.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_juego_turno.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_menu_mapas.dart';
@@ -117,5 +118,63 @@ void main() {
         expect(find.byType(ChoiceChip), findsNWidgets(2));
       },
     );
+
+    testWidgets('Muestra el marcador dinámico con jugadores y meta de puntos', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3),
+          Celda(columna: 0, fila: 1, region: Region.verdeNoroeste),
+        ],
+        zonas: [
+          Zona(region: Region.amarillo, tipo: TipoAmarillo()),
+          Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+        ],
+      );
+
+      const jugadores = [
+        JugadorPartida(
+          socketId: 'socket-ana',
+          idUsuario: 1,
+          usuario: 'Ana',
+          puntuacion: 12,
+        ),
+        JugadorPartida(
+          socketId: 'socket-luis',
+          idUsuario: 2,
+          usuario: 'Luis',
+          puntuacion: 7,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaJuegoTurno(
+            tablero: tablero,
+            jugadores: jugadores,
+            puntosParaGanar: 20,
+            tuSocketId: 'socket-ana',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Marcador'), findsOneWidget);
+      expect(find.text('Ana'), findsOneWidget);
+      expect(find.text('Luis'), findsOneWidget);
+      expect(find.text('12 pts'), findsOneWidget);
+      expect(find.text('7 pts'), findsOneWidget);
+      expect(find.text('Meta: 20 pts'), findsOneWidget);
+    });
   });
 }
