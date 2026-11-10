@@ -13,7 +13,7 @@ class PantallaSeleccionInicial extends StatefulWidget {
   final String? codigoSala;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
-  final String? tuSocketId;
+  final String? tuIdSocket;
   final String? anfitrion;
 
   const PantallaSeleccionInicial({
@@ -23,7 +23,7 @@ class PantallaSeleccionInicial extends StatefulWidget {
     this.codigoSala,
     this.jugadores = const [],
     this.puntosParaGanar,
-    this.tuSocketId,
+    this.tuIdSocket,
     this.anfitrion,
   });
 
@@ -53,7 +53,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                     codigoSala: widget.codigoSala,
                     jugadores: widget.jugadores,
                     puntosParaGanar: widget.puntosParaGanar,
-                    tuSocketId: widget.tuSocketId,
+                    tuIdSocket: widget.tuIdSocket,
                     anfitrion: widget.anfitrion,
                   ),
                 ),

@@ -1,11 +1,11 @@
 class JugadorPartida {
-  final String socketId;
+  final String idSocket;
   final int idUsuario;
   final String usuario;
   final int puntuacion;
 
   const JugadorPartida({
-    required this.socketId,
+    required this.idSocket,
     required this.idUsuario,
     required this.usuario,
     this.puntuacion = 0,
@@ -13,16 +13,16 @@ class JugadorPartida {
 
   factory JugadorPartida.desdeJson(Map<String, dynamic> datos) {
     return JugadorPartida(
-      socketId: datos['socketId']?.toString() ?? '',
+      idSocket: datos['socketId']?.toString() ?? '',
       idUsuario: _comoEntero(datos['idUsuario']) ?? 0,
       usuario: datos['usuario']?.toString() ?? 'Jugador',
       puntuacion: _comoEntero(datos['puntuacion']) ?? 0,
     );
   }
 
-  JugadorPartida copyWith({int? puntuacion}) {
+  JugadorPartida copiarCon({int? puntuacion}) {
     return JugadorPartida(
-      socketId: socketId,
+      idSocket: idSocket,
       idUsuario: idUsuario,
       usuario: usuario,
       puntuacion: puntuacion ?? this.puntuacion,

@@ -54,7 +54,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
           codigoSala: estado.codigo,
           jugadores: estado.jugadores,
           puntosParaGanar: estado.puntosParaGanar,
-          tuSocketId: estado.tuSocketId,
+          tuIdSocket: estado.tuIdSocket,
           anfitrion: estado.anfitrion,
         ),
       ),
@@ -250,7 +250,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   Widget _construirEsperandoJugadores(EsperandoJugadores estado) {
     final bool iniciando = estado is IniciandoPartida;
     final bool esAnfitrion =
-        estado.tuSocketId != null && estado.tuSocketId == estado.anfitrion;
+        estado.tuIdSocket != null && estado.tuIdSocket == estado.anfitrion;
     final bool puedeIniciar =
         esAnfitrion && estado.jugadores.length >= 2 && !iniciando;
 
@@ -408,8 +408,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
     JugadorPartida jugador,
     EsperandoJugadores estado,
   ) {
-    final bool esAnfitrion = jugador.socketId == estado.anfitrion;
-    final bool esTu = jugador.socketId == estado.tuSocketId;
+    final bool esAnfitrion = jugador.idSocket == estado.anfitrion;
+    final bool esTu = jugador.idSocket == estado.tuIdSocket;
     final String inicial = jugador.usuario.isEmpty
         ? '?'
         : jugador.usuario[0].toUpperCase();

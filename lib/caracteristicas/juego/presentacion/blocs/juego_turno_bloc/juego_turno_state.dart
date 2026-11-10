@@ -12,7 +12,7 @@ class JuegoTurnoEstado {
   final String? mensajeAyuda;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
-  final String? tuSocketId;
+  final String? tuIdSocket;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -25,7 +25,7 @@ class JuegoTurnoEstado {
     this.mensajeAyuda,
     this.jugadores = const [],
     this.puntosParaGanar,
-    this.tuSocketId,
+    this.tuIdSocket,
   });
 
   /// Dado elegido para buscar la casilla Ancla en el tablero.
@@ -53,7 +53,7 @@ class JuegoTurnoEstado {
     String? mensajeAyuda,
     List<JugadorPartida>? jugadores,
     int? puntosParaGanar,
-    String? tuSocketId,
+    String? tuIdSocket,
     bool limpiarAncla = false,
     bool limpiarDados = false,
     bool limpiarMensajeAyuda = false,
@@ -77,7 +77,7 @@ class JuegoTurnoEstado {
           : (mensajeAyuda ?? this.mensajeAyuda),
       jugadores: jugadores ?? this.jugadores,
       puntosParaGanar: puntosParaGanar ?? this.puntosParaGanar,
-      tuSocketId: tuSocketId ?? this.tuSocketId,
+      tuIdSocket: tuIdSocket ?? this.tuIdSocket,
     );
   }
 }
@@ -94,7 +94,7 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.mensajeAyuda,
     super.jugadores,
     super.puntosParaGanar,
-    super.tuSocketId,
+    super.tuIdSocket,
   });
 }
 
@@ -110,12 +110,12 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.mensajeAyuda,
     super.jugadores,
     super.puntosParaGanar,
-    super.tuSocketId,
+    super.tuIdSocket,
   });
 }
 
 class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
-  final String? ganadorSocketId;
+  final String? idSocketGanador;
   final String? ganadorUsuario;
   final bool esGanadorLocal;
 
@@ -130,8 +130,8 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.mensajeAyuda,
     super.jugadores,
     super.puntosParaGanar,
-    super.tuSocketId,
-    required this.ganadorSocketId,
+    super.tuIdSocket,
+    required this.idSocketGanador,
     required this.ganadorUsuario,
     required this.esGanadorLocal,
   });

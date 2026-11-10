@@ -30,8 +30,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       (evento, emitir) => emitir(
         EsperandoJugadores(
           codigo: evento.codigo,
-          anfitrion: evento.tuSocketId,
-          tuSocketId: evento.tuSocketId,
+          anfitrion: evento.tuIdSocket,
+          tuIdSocket: evento.tuIdSocket,
         ),
       ),
     );
@@ -39,8 +39,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       if (evento.iniciada) return;
 
       final LobbyEstado estadoActual = state;
-      final String? tuSocketId = estadoActual is EsperandoJugadores
-          ? estadoActual.tuSocketId
+      final String? tuIdSocket = estadoActual is EsperandoJugadores
+          ? estadoActual.tuIdSocket
           : null;
 
       if (estadoActual is IniciandoPartida) {
@@ -49,7 +49,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
             codigo: evento.codigo,
             jugadores: evento.jugadores,
             anfitrion: evento.anfitrion,
-            tuSocketId: tuSocketId,
+            tuIdSocket: tuIdSocket,
             puntosParaGanar: evento.puntosParaGanar,
           ),
         );
@@ -61,7 +61,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           codigo: evento.codigo,
           jugadores: evento.jugadores,
           anfitrion: evento.anfitrion,
-          tuSocketId: tuSocketId,
+          tuIdSocket: tuIdSocket,
           puntosParaGanar: evento.puntosParaGanar,
         ),
       );
@@ -73,7 +73,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           jugadores: evento.jugadores,
           puntosParaGanar: evento.puntosParaGanar,
           anfitrion: evento.anfitrion,
-          tuSocketId: evento.tuSocketId,
+          tuIdSocket: evento.tuIdSocket,
         ),
       ),
     );
@@ -86,7 +86,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
 
     _suscripcionSalaCreada = _servicioSocket.salaCreada.listen(
       (codigo) =>
-          add(SalaCreadaRecibida(codigo, tuSocketId: _servicioSocket.idActual)),
+          add(SalaCreadaRecibida(codigo, tuIdSocket: _servicioSocket.idActual)),
     );
     _suscripcionSalaActualizada = _servicioSocket.salaActualizada.listen((
       datos,
@@ -108,7 +108,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           jugadores: _parsearJugadores(datos['jugadores']),
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']) ?? 0,
           anfitrion: datos['anfitrion']?.toString(),
-          tuSocketId: datos['tuSocketId']?.toString(),
+          tuIdSocket: datos['tuSocketId']?.toString(),
         ),
       );
     });
@@ -163,7 +163,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
 
     if (estadoActual is! EsperandoJugadores) return;
 
-    if (estadoActual.tuSocketId != estadoActual.anfitrion) {
+    if (estadoActual.tuIdSocket != estadoActual.anfitrion) {
       emitir(
         const ErrorLobby(
           mensaje: 'Solo el anfitrión puede iniciar la partida.',
@@ -186,7 +186,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         codigo: estadoActual.codigo,
         jugadores: estadoActual.jugadores,
         anfitrion: estadoActual.anfitrion,
-        tuSocketId: estadoActual.tuSocketId,
+        tuIdSocket: estadoActual.tuIdSocket,
         puntosParaGanar: estadoActual.puntosParaGanar,
       ),
     );

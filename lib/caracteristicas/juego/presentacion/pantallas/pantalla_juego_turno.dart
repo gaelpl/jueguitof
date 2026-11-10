@@ -16,7 +16,7 @@ class PantallaJuegoTurno extends StatefulWidget {
   final String? codigoSala;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
-  final String? tuSocketId;
+  final String? tuIdSocket;
   final String? anfitrion;
 
   const PantallaJuegoTurno({
@@ -25,7 +25,7 @@ class PantallaJuegoTurno extends StatefulWidget {
     this.codigoSala,
     this.jugadores = const [],
     this.puntosParaGanar,
-    this.tuSocketId,
+    this.tuIdSocket,
     this.anfitrion,
   });
 
@@ -63,7 +63,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
         codigoSala: widget.codigoSala,
         jugadores: widget.jugadores,
         puntosParaGanar: widget.puntosParaGanar,
-        tuSocketId: widget.tuSocketId,
+        tuIdSocket: widget.tuIdSocket,
       ),
       child: Scaffold(
         appBar: AppBar(
@@ -355,7 +355,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
       );
     }
 
-    final String? tuSocketId = state.tuSocketId ?? widget.tuSocketId;
+    final String? tuIdSocket = state.tuIdSocket ?? widget.tuIdSocket;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -399,7 +399,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                 for (final JugadorPartida jugador in state.jugadores)
                   _construirTarjetaJugador(
                     jugador,
-                    jugador.socketId == tuSocketId,
+                    jugador.idSocket == tuIdSocket,
                   ),
               ],
             ),

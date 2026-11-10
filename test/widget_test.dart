@@ -144,13 +144,13 @@ void main() {
 
       const jugadores = [
         JugadorPartida(
-          socketId: 'socket-ana',
+          idSocket: 'socket-ana',
           idUsuario: 1,
           usuario: 'Ana',
           puntuacion: 12,
         ),
         JugadorPartida(
-          socketId: 'socket-luis',
+          idSocket: 'socket-luis',
           idUsuario: 2,
           usuario: 'Luis',
           puntuacion: 7,
@@ -163,7 +163,7 @@ void main() {
             tablero: tablero,
             jugadores: jugadores,
             puntosParaGanar: 20,
-            tuSocketId: 'socket-ana',
+            tuIdSocket: 'socket-ana',
           ),
         ),
       );

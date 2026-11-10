@@ -15,7 +15,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final ServicioSocket _servicioSocket;
   final String? _codigoSala;
   final Duration _duracionMensajeAyuda;
-  String? _tuSocketId;
+  String? _tuIdSocket;
   Timer? _temporizadorMensajeAyuda;
 
   late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
@@ -36,10 +36,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     Duration? duracionMensajeAyuda,
     List<JugadorPartida> jugadores = const [],
     int? puntosParaGanar,
-    String? tuSocketId,
+    String? tuIdSocket,
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
-       _tuSocketId = tuSocketId,
+       _tuIdSocket = tuIdSocket,
        _duracionMensajeAyuda =
            duracionMensajeAyuda ?? const Duration(seconds: 4),
        super(
@@ -48,7 +48,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
            puntuacionTotal: calcularPuntuacionTotal(tableroInicial),
            jugadores: jugadores,
            puntosParaGanar: puntosParaGanar,
-           tuSocketId: tuSocketId,
+           tuIdSocket: tuIdSocket,
          ),
        ) {
     on<EventoLanzarDados>(_onLanzarDados);
@@ -103,7 +103,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
       add(
         EventoPartidaGanada(
-          ganadorSocketId: ganadorMap?['socketId']?.toString(),
+          idSocketGanador: ganadorMap?['socketId']?.toString(),
           ganadorUsuario: ganadorMap?['usuario']?.toString(),
           jugadores: _parsearJugadores(datos['jugadores']),
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
@@ -136,7 +136,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
     if (_codigoSala != null) {
       _servicioSocket.iniciarPartida();
-      _tuSocketId ??= _servicioSocket.idActual;
+      _tuIdSocket ??= _servicioSocket.idActual;
     }
   }
 
@@ -257,11 +257,11 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     event.celdaObjetivo.asignarValor(dColocar.valor);
 
     final nuevoPuntaje = calcularPuntuacionTotal(state.tablero);
-    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final String? tuIdSocket = _tuIdSocket ?? state.tuIdSocket;
     final List<JugadorPartida> jugadoresActualizados = state.jugadores
         .map(
-          (jugador) => jugador.socketId == tuSocketId
-              ? jugador.copyWith(puntuacion: nuevoPuntaje)
+          (jugador) => jugador.idSocket == tuIdSocket
+              ? jugador.copiarCon(puntuacion: nuevoPuntaje)
               : jugador,
         )
         .toList();
@@ -382,7 +382,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         mensajeAyuda: state.mensajeAyuda,
         jugadores: state.jugadores,
         puntosParaGanar: state.puntosParaGanar,
-        tuSocketId: state.tuSocketId,
+        tuIdSocket: state.tuIdSocket,
       ),
     );
   }
@@ -406,7 +406,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         mensajeAyuda: state.mensajeAyuda,
         jugadores: state.jugadores,
         puntosParaGanar: state.puntosParaGanar,
-        tuSocketId: state.tuSocketId,
+        tuIdSocket: state.tuIdSocket,
       ),
     );
   }
@@ -415,17 +415,17 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoPuntuacionesActualizadas event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
-    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final String? tuIdSocket = _tuIdSocket ?? state.tuIdSocket;
     final JugadorPartida? jugadorLocal = _buscarJugador(
       event.jugadores,
-      tuSocketId,
+      tuIdSocket,
     );
 
     emit(
       state.copyWith(
         jugadores: event.jugadores,
         puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
-        tuSocketId: tuSocketId,
+        tuIdSocket: tuIdSocket,
         puntuacionTotal: jugadorLocal?.puntuacion ?? state.puntuacionTotal,
       ),
     );
@@ -435,9 +435,9 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoPartidaGanada event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
-    final String? tuSocketId = _tuSocketId ?? state.tuSocketId;
+    final String? tuIdSocket = _tuIdSocket ?? state.tuIdSocket;
     final bool esGanadorLocal =
-        event.ganadorSocketId != null && event.ganadorSocketId == tuSocketId;
+        event.idSocketGanador != null && event.idSocketGanador == tuIdSocket;
 
     _servicioSocket.finalizarPartida();
     emit(
@@ -452,8 +452,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         mensajeAyuda: state.mensajeAyuda,
         jugadores: event.jugadores.isEmpty ? state.jugadores : event.jugadores,
         puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
-        tuSocketId: tuSocketId,
-        ganadorSocketId: event.ganadorSocketId,
+        tuIdSocket: tuIdSocket,
+        idSocketGanador: event.idSocketGanador,
         ganadorUsuario: event.ganadorUsuario,
         esGanadorLocal: esGanadorLocal,
       ),
@@ -506,12 +506,12 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
   JugadorPartida? _buscarJugador(
     List<JugadorPartida> jugadores,
-    String? socketId,
+    String? idSocket,
   ) {
-    if (socketId == null) return null;
+    if (idSocket == null) return null;
 
     for (final JugadorPartida jugador in jugadores) {
-      if (jugador.socketId == socketId) return jugador;
+      if (jugador.idSocket == idSocket) return jugador;
     }
 
     return null;

@@ -68,13 +68,13 @@ class EventoPuntuacionesActualizadas extends JuegoTurnoEvento {
 }
 
 class EventoPartidaGanada extends JuegoTurnoEvento {
-  final String? ganadorSocketId;
+  final String? idSocketGanador;
   final String? ganadorUsuario;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
 
   EventoPartidaGanada({
-    this.ganadorSocketId,
+    this.idSocketGanador,
     this.ganadorUsuario,
     this.jugadores = const [],
     this.puntosParaGanar,

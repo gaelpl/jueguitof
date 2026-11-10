@@ -22,9 +22,9 @@ class IniciarPartidaSolicitada extends LobbyEvento {
 
 class SalaCreadaRecibida extends LobbyEvento {
   final String codigo;
-  final String? tuSocketId;
+  final String? tuIdSocket;
 
-  const SalaCreadaRecibida(this.codigo, {this.tuSocketId});
+  const SalaCreadaRecibida(this.codigo, {this.tuIdSocket});
 }
 
 class SalaActualizadaRecibida extends LobbyEvento {
@@ -48,14 +48,14 @@ class PartidaListaRecibida extends LobbyEvento {
   final List<JugadorPartida> jugadores;
   final int puntosParaGanar;
   final String? anfitrion;
-  final String? tuSocketId;
+  final String? tuIdSocket;
 
   const PartidaListaRecibida({
     required this.codigo,
     required this.jugadores,
     required this.puntosParaGanar,
     this.anfitrion,
-    this.tuSocketId,
+    this.tuIdSocket,
   });
 }
 
