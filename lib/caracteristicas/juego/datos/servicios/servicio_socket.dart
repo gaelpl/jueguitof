@@ -30,6 +30,17 @@ class ServicioSocket {
       StreamController<bool>.broadcast();
   final StreamController<bool> _controladorConexionInestable =
       StreamController<bool>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorSalaActualizada =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>>
+  _controladorPuntuacionesActualizadas =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorPartidaGanada =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorJugadorConcedio =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorJugadorDesconectado =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   bool _enPartida = false;
   bool _conexionInestableActual = false;
@@ -44,7 +55,18 @@ class ServicioSocket {
   Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
   Stream<bool> get rivalDesconectado => _controladorRivalDesconectado.stream;
   Stream<bool> get conexionInestable => _controladorConexionInestable.stream;
+  Stream<Map<String, dynamic>> get salaActualizada =>
+      _controladorSalaActualizada.stream;
+  Stream<Map<String, dynamic>> get puntuacionesActualizadas =>
+      _controladorPuntuacionesActualizadas.stream;
+  Stream<Map<String, dynamic>> get partidaGanada =>
+      _controladorPartidaGanada.stream;
+  Stream<Map<String, dynamic>> get jugadorConcedio =>
+      _controladorJugadorConcedio.stream;
+  Stream<Map<String, dynamic>> get jugadorDesconectado =>
+      _controladorJugadorDesconectado.stream;
   bool get conexionInestableActual => _conexionInestableActual;
+  String? get idActual => _socket?.id;
 
   void iniciarPartida() {
     _enPartida = true;
@@ -132,6 +154,38 @@ class ServicioSocket {
       }
     });
 
+    socket.on('sala_actualizada', (datos) {
+      if (datos is Map) {
+        _controladorSalaActualizada.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('puntuaciones_actualizadas', (datos) {
+      if (datos is Map) {
+        _controladorPuntuacionesActualizadas.add(
+          Map<String, dynamic>.from(datos),
+        );
+      }
+    });
+
+    socket.on('partida_ganada', (datos) {
+      if (datos is Map) {
+        _controladorPartidaGanada.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('jugador_concedio', (datos) {
+      if (datos is Map) {
+        _controladorJugadorConcedio.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('jugador_desconectado', (datos) {
+      if (datos is Map) {
+        _controladorJugadorDesconectado.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
     socket.on('error_sala', (datos) {
       _controladorErrorSala.add(
         _obtenerMensaje(datos, 'No se pudo unir a la sala.'),
@@ -170,6 +224,27 @@ class ServicioSocket {
       throw StateError('El socket no está inicializado.');
     }
     socket.emit('unirse_sala', codigo.trim().toUpperCase());
+  }
+
+  void solicitarInicioPartida(String codigoSala) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('iniciar_partida', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+    });
+  }
+
+  void actualizarPuntuacion(String codigoSala, int puntuacion) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('puntuacion_actualizada', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+      'puntuacion': puntuacion,
+    });
   }
 
   void enviarMovimiento(String codigoSala, Map<String, dynamic> datos) {

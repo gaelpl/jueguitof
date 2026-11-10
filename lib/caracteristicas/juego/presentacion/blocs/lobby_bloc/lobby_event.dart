@@ -1,3 +1,5 @@
+import '../../../dominio/entidades/jugador_partida.dart';
+
 abstract class LobbyEvento {
   const LobbyEvento();
 }
@@ -12,19 +14,48 @@ class UnirseSalaSolicitada extends LobbyEvento {
   const UnirseSalaSolicitada(this.codigo);
 }
 
-class SalaCreadaRecibida extends LobbyEvento {
+class IniciarPartidaSolicitada extends LobbyEvento {
   final String codigo;
 
-  const SalaCreadaRecibida(this.codigo);
+  const IniciarPartidaSolicitada(this.codigo);
+}
+
+class SalaCreadaRecibida extends LobbyEvento {
+  final String codigo;
+  final String? tuSocketId;
+
+  const SalaCreadaRecibida(this.codigo, {this.tuSocketId});
+}
+
+class SalaActualizadaRecibida extends LobbyEvento {
+  final String codigo;
+  final List<JugadorPartida> jugadores;
+  final String? anfitrion;
+  final bool iniciada;
+  final int? puntosParaGanar;
+
+  const SalaActualizadaRecibida({
+    required this.codigo,
+    required this.jugadores,
+    this.anfitrion,
+    this.iniciada = false,
+    this.puntosParaGanar,
+  });
 }
 
 class PartidaListaRecibida extends LobbyEvento {
   final String codigo;
-  final List<dynamic> jugadores;
+  final List<JugadorPartida> jugadores;
+  final int puntosParaGanar;
+  final String? anfitrion;
+  final String? tuSocketId;
 
   const PartidaListaRecibida({
     required this.codigo,
     required this.jugadores,
+    required this.puntosParaGanar,
+    this.anfitrion,
+    this.tuSocketId,
   });
 }
 

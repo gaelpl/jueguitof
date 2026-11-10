@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../datos/mapas_oficiales.dart';
+import '../../dominio/entidades/jugador_partida.dart';
 import '../blocs/lobby_bloc/lobby_bloc.dart';
 import 'pantalla_seleccion_inicial.dart';
 
@@ -24,7 +25,6 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   final TextEditingController _codigoControlador = TextEditingController();
 
   bool _navegacionRealizada = false;
-  String? _codigoSalaActual;
 
   @override
   void dispose() {
@@ -45,13 +45,17 @@ class _PantallaLobbyState extends State<PantallaLobby> {
     );
   }
 
-  void _irAlJuego() {
+  void _irAlJuego(PartidaLista estado) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => PantallaSeleccionInicial(
           tablero: CreadorMapas.obtenerMapa(1),
           numeroMapa: 1,
-          codigoSala: _codigoSalaActual,
+          codigoSala: estado.codigo,
+          jugadores: estado.jugadores,
+          puntosParaGanar: estado.puntosParaGanar,
+          tuSocketId: estado.tuSocketId,
+          anfitrion: estado.anfitrion,
         ),
       ),
     );
@@ -124,14 +128,9 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                             _mostrarMensaje(estado.mensaje, esError: true);
                           }
 
-                          if (estado is EsperandoRival) {
-                            _codigoSalaActual = estado.codigo;
-                          }
-
                           if (estado is PartidaLista && !_navegacionRealizada) {
-                            _codigoSalaActual = estado.codigo;
                             _navegacionRealizada = true;
-                            _irAlJuego();
+                            _irAlJuego(estado);
                           }
                         },
                         builder: (context, estado) {
@@ -152,7 +151,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   Widget _construirTarjeta(BuildContext context, LobbyEstado estado) {
     final bool creandoSala = estado is CreandoSala;
     final bool uniendoSala = estado is UniendoASala;
-    final bool esperandoRival = estado is EsperandoRival;
+    final bool esperandoJugadores = estado is EsperandoJugadores;
     final bool ocupado = creandoSala || uniendoSala;
 
     return Container(
@@ -231,8 +230,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
             ),
           ),
           const SizedBox(height: 26),
-          if (esperandoRival)
-            _construirEsperandoRival(estado)
+          if (esperandoJugadores)
+            _construirEsperandoJugadores(estado)
           else
             _construirFormulario(
               ocupado: ocupado,
@@ -248,7 +247,13 @@ class _PantallaLobbyState extends State<PantallaLobby> {
     );
   }
 
-  Widget _construirEsperandoRival(EsperandoRival estado) {
+  Widget _construirEsperandoJugadores(EsperandoJugadores estado) {
+    final bool iniciando = estado is IniciandoPartida;
+    final bool esAnfitrion =
+        estado.tuSocketId != null && estado.tuSocketId == estado.anfitrion;
+    final bool puedeIniciar =
+        esAnfitrion && estado.jugadores.length >= 2 && !iniciando;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -301,27 +306,185 @@ class _PantallaLobbyState extends State<PantallaLobby> {
             ],
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 20),
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.2),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Esperando a que se una un rival...',
+            const Text(
+              'Jugadores en la sala',
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _textoSecundario.withValues(alpha: 0.95),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: _textoPrincipal,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _cian.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${estado.jugadores.length}/5',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: _azulProfundo,
+                ),
               ),
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        if (estado.jugadores.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            alignment: Alignment.center,
+            child: const Text(
+              'Esperando jugadores...',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _textoSecundario,
+              ),
+            ),
+          )
+        else
+          ...estado.jugadores.map(
+            (jugador) => _construirFilaJugador(jugador, estado),
+          ),
+        const SizedBox(height: 16),
+        if (esAnfitrion) ...[
+          _BotonPrincipal(
+            cargando: iniciando,
+            texto: 'Iniciar Partida',
+            icono: Icons.play_arrow_rounded,
+            onPressed: puedeIniciar
+                ? () {
+                    context.read<LobbyBloc>().add(
+                      IniciarPartidaSolicitada(estado.codigo),
+                    );
+                  }
+                : null,
+          ),
+          if (estado.jugadores.length < 2)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text(
+                'Se necesitan al menos 2 jugadores para iniciar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _textoSecundario,
+                ),
+              ),
+            ),
+        ] else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Esperando a que el anfitrión inicie...',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _textoSecundario.withValues(alpha: 0.95),
+                ),
+              ),
+            ],
+          ),
       ],
+    );
+  }
+
+  Widget _construirFilaJugador(
+    JugadorPartida jugador,
+    EsperandoJugadores estado,
+  ) {
+    final bool esAnfitrion = jugador.socketId == estado.anfitrion;
+    final bool esTu = jugador.socketId == estado.tuSocketId;
+    final String inicial = jugador.usuario.isEmpty
+        ? '?'
+        : jugador.usuario[0].toUpperCase();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: esTu ? _cian.withValues(alpha: 0.1) : _fondoCampo,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: esTu ? _cian.withValues(alpha: 0.5) : Colors.transparent,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: _azulProfundo.withValues(alpha: 0.12),
+            child: Text(
+              inicial,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: _azulProfundo,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              jugador.usuario,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _textoPrincipal,
+              ),
+            ),
+          ),
+          if (esAnfitrion)
+            Container(
+              margin: const EdgeInsets.only(left: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _azulProfundo.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Anfitrión',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: _azulProfundo,
+                ),
+              ),
+            ),
+          if (esTu)
+            Container(
+              margin: const EdgeInsets.only(left: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _cian.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Tú',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0369A1),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -495,7 +658,7 @@ class _BotonPrincipal extends StatelessWidget {
   final bool cargando;
   final String texto;
   final IconData icono;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _BotonPrincipal({
     required this.cargando,
@@ -526,7 +689,7 @@ class _BotonPrincipal extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: cargando ? null : onPressed,
+          onTap: (cargando || onPressed == null) ? null : onPressed,
           child: SizedBox(
             height: 54,
             child: Center(
