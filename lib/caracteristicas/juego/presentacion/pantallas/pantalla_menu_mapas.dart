@@ -4,6 +4,7 @@ import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
 import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/mapas_oficiales.dart';
 import 'pantalla_lobby.dart';
+import 'pantalla_reglas.dart';
 import 'pantalla_seleccion_inicial.dart';
 
 const Color _azulProfundo = Color(0xFF312E81);
@@ -179,6 +180,8 @@ class PantallaMenuMapas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _construirAccesoMultijugador(context),
+                      const SizedBox(height: 16),
+                      _construirAccesoReglas(context),
                       const SizedBox(height: 26),
                       Row(
                         children: [
@@ -338,6 +341,26 @@ class PantallaMenuMapas extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _construirAccesoReglas(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PantallaReglas()));
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _azulProfundo,
+        side: const BorderSide(color: Color(0xFFCBD5E1)),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      icon: const Icon(Icons.menu_book_rounded, size: 22),
+      label: const Text(
+        'Reglas del Juego',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
       ),
     );
   }

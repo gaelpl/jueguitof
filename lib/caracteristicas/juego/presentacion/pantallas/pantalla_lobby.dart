@@ -6,6 +6,7 @@ import '../../datos/mapas_oficiales.dart';
 import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
 import '../blocs/lobby_bloc/lobby_bloc.dart';
+import 'pantalla_reglas.dart';
 import 'pantalla_seleccion_inicial.dart';
 
 const Color _azulProfundo = Color(0xFF312E81);
@@ -125,6 +126,29 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
                   ),
                 ),
               ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: IconButton(
+                    tooltip: 'Reglas del Juego',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaReglas(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.menu_book_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(

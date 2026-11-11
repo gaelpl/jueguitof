@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../nucleo/tema/colores_region.dart';
+import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
 import '../../dominio/logica/juego_logica.dart';
 import '../blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
@@ -250,6 +251,12 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                                         context.read<InicioJuegoBloc>().add(
                                           EventoConfirmarInicio(),
                                         );
+                                        if (widget.codigoSala != null) {
+                                          ServicioSocket.instancia
+                                              .marcarJugadorListo(
+                                                widget.codigoSala!,
+                                              );
+                                        }
                                       }
                                     : null,
                                 child: const Text(

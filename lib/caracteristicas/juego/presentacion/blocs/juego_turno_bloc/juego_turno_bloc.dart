@@ -30,6 +30,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   _suscripcionJugadorConcedio;
   late final StreamSubscription<Map<String, dynamic>>
   _suscripcionJugadorDesconectado;
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionEstadoListos;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
@@ -72,6 +73,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoPuntuacionesActualizadas>(_onPuntuacionesActualizadas);
     on<EventoPartidaGanada>(_onPartidaGanada);
     on<EventoJugadorSalio>(_onJugadorSalio);
+    on<EventoEstadoListos>(_onEstadoListos);
 
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => add(EventoRivalConcedio()),
@@ -165,9 +167,22 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           );
         });
 
+    _suscripcionEstadoListos = _servicioSocket.estadoListos.listen((datos) {
+      add(
+        EventoEstadoListos(
+          todosListos: datos['todosListos'] == true,
+          listos: _comoEntero(datos['listos']) ?? 0,
+          total: _comoEntero(datos['total']) ?? 0,
+        ),
+      );
+    });
+
     if (_codigoSala != null) {
       _servicioSocket.iniciarPartida();
       _tuIdSocket ??= _servicioSocket.idActual;
+      try {
+        _servicioSocket.consultarEstadoListos(_codigoSala);
+      } catch (_) {}
     }
   }
 
@@ -702,6 +717,19 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     });
   }
 
+  void _onEstadoListos(
+    EventoEstadoListos event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    emit(
+      state.copyWith(
+        todosListos: event.todosListos,
+        jugadoresListos: event.listos,
+        totalJugadores: event.total,
+      ),
+    );
+  }
+
   void _emitirAccionTurno() {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
@@ -776,6 +804,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     await _suscripcionPartidaGanada.cancel();
     await _suscripcionJugadorConcedio.cancel();
     await _suscripcionJugadorDesconectado.cancel();
+    await _suscripcionEstadoListos.cancel();
     if (_codigoSala != null) {
       _servicioSocket.finalizarPartida();
     }

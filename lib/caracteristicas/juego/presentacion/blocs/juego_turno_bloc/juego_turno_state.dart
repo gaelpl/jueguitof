@@ -20,6 +20,9 @@ class JuegoTurnoEstado {
   final bool esperandoDados;
   final int segundosRestantesRonda;
   final int duracionRondaSegundos;
+  final bool todosListos;
+  final int jugadoresListos;
+  final int totalJugadores;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -40,6 +43,9 @@ class JuegoTurnoEstado {
     this.esperandoDados = false,
     this.segundosRestantesRonda = 0,
     this.duracionRondaSegundos = 300,
+    this.todosListos = false,
+    this.jugadoresListos = 0,
+    this.totalJugadores = 0,
   });
 
   bool get esMultijugador => anfitrion != null;
@@ -47,8 +53,12 @@ class JuegoTurnoEstado {
   bool get esAnfitrion =>
       esMultijugador && tuIdSocket != null && tuIdSocket == anfitrion;
 
+  bool get esperandoJugadoresListos =>
+      esMultijugador && esAnfitrion && !todosListos && !rondaActiva;
+
   bool get puedeLanzarDados =>
-      !esMultijugador || (esAnfitrion && !rondaActiva && !esperandoDados);
+      !esMultijugador ||
+      (esAnfitrion && !rondaActiva && !esperandoDados && todosListos);
 
   bool get puedeActuar =>
       !esMultijugador || (rondaActiva && !accionTurnoCompletada);
@@ -89,6 +99,9 @@ class JuegoTurnoEstado {
     bool? esperandoDados,
     int? segundosRestantesRonda,
     int? duracionRondaSegundos,
+    bool? todosListos,
+    int? jugadoresListos,
+    int? totalJugadores,
     bool limpiarAncla = false,
     bool limpiarDados = false,
     bool limpiarMensajeAyuda = false,
@@ -123,6 +136,9 @@ class JuegoTurnoEstado {
           segundosRestantesRonda ?? this.segundosRestantesRonda,
       duracionRondaSegundos:
           duracionRondaSegundos ?? this.duracionRondaSegundos,
+      todosListos: todosListos ?? this.todosListos,
+      jugadoresListos: jugadoresListos ?? this.jugadoresListos,
+      totalJugadores: totalJugadores ?? this.totalJugadores,
     );
   }
 }

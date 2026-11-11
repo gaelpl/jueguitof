@@ -120,3 +120,15 @@ class EventoJugadorSalio extends JuegoTurnoEvento {
     this.anfitrion,
   });
 }
+
+class EventoEstadoListos extends JuegoTurnoEvento {
+  final bool todosListos;
+  final int listos;
+  final int total;
+
+  EventoEstadoListos({
+    required this.todosListos,
+    required this.listos,
+    required this.total,
+  });
+}

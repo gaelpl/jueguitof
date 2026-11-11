@@ -445,6 +445,11 @@ void main() {
         anfitrion: 'socket-ana',
       );
 
+      bloc.add(
+        EventoEstadoListos(todosListos: true, listos: 1, total: 1),
+      );
+      await pumpEventQueue();
+
       expect(bloc.state.puedeLanzarDados, isTrue);
 
       bloc.add(

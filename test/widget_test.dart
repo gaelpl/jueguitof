@@ -111,6 +111,9 @@ void main() {
         final botonDados = find.byIcon(Icons.casino);
         expect(botonDados, findsOneWidget);
 
+        await tester.ensureVisible(botonDados);
+        await tester.pumpAndSettle();
+
         await tester.tap(botonDados);
         await tester.pumpAndSettle();
 
