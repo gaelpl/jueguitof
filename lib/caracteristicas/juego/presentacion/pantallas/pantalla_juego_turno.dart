@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -76,15 +75,21 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
           centerTitle: true,
           actions: [
             Builder(
-              builder: (context) => TextButton.icon(
-                key: const Key('boton-rendirse'),
-                onPressed: _conexionInestable
-                    ? null
-                    : () => _confirmarRendicion(context),
-                icon: const Icon(Icons.flag),
-                label: const Text('Rendirse'),
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-              ),
+              builder: (context) {
+                final bool pantallaAngosta =
+                    MediaQuery.sizeOf(context).width < 380;
+                return TextButton.icon(
+                  key: const Key('boton-rendirse'),
+                  onPressed: _conexionInestable
+                      ? null
+                      : () => _confirmarRendicion(context),
+                  icon: const Icon(Icons.flag),
+                  label: pantallaAngosta
+                      ? const SizedBox.shrink()
+                      : const Text('Rendirse'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                );
+              },
             ),
           ],
         ),
@@ -108,301 +113,228 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             return SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final double ladoTablero = math.max(
+                  // El tablero es cuadrado y usa el máximo ancho permitido por
+                  // el teléfono, con un tope para tablets/escritorio.
+                  final double anchoDisponible = constraints.maxWidth - 24;
+                  final double ladoTablero = anchoDisponible.clamp(
                     160.0,
-                    math.min(
-                      constraints.maxWidth - 24,
-                      constraints.maxHeight * 0.46,
-                    ),
+                    480.0,
                   );
 
-                  return Column(
-                    children: [
-                      if (_conexionInestable) _construirBannerConexion(),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          final deslizamiento = Tween<Offset>(
-                            begin: const Offset(0, -0.2),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: deslizamiento,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: state.mensajeAyuda == null
-                            ? const SizedBox.shrink(
-                                key: ValueKey('sin-mensaje-ayuda'),
-                              )
-                            : _construirBannerAyuda(state.mensajeAyuda!),
-                      ),
-                      _construirMarcador(context, state),
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        if (_conexionInestable) _construirBannerConexion(),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            final deslizamiento = Tween<Offset>(
+                              begin: const Offset(0, -0.2),
+                              end: Offset.zero,
+                            ).animate(animation);
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: deslizamiento,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: state.mensajeAyuda == null
+                              ? const SizedBox.shrink(
+                                  key: ValueKey('sin-mensaje-ayuda'),
+                                )
+                              : _construirBannerAyuda(state.mensajeAyuda!),
+                        ),
+                        _construirMarcador(context, state),
 
-                      _construirLeyenda(state),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        key: const Key('tablero-juego'),
-                        width: ladoTablero,
-                        height: ladoTablero,
-                        child: AbsorbPointer(
-                          absorbing:
-                              _conexionInestable ||
-                              (state.esMultijugador && !state.puedeActuar),
-                          child: GridView.builder(
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 7,
-                                  crossAxisSpacing: 3,
-                                  mainAxisSpacing: 3,
-                                ),
-                            itemCount: 49,
-                            itemBuilder: (context, index) {
-                              int col = index % 7;
-                              int fila = index ~/ 7;
-                              final celda = state.tablero.obtenerCeldaEn(
-                                col,
-                                fila,
-                              );
+                        _construirLeyenda(state),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          key: const Key('tablero-juego'),
+                          width: ladoTablero,
+                          height: ladoTablero,
+                          child: AbsorbPointer(
+                            absorbing:
+                                _conexionInestable ||
+                                (state.esMultijugador && !state.puedeActuar),
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 7,
+                                    crossAxisSpacing: 3,
+                                    mainAxisSpacing: 3,
+                                  ),
+                              itemCount: 49,
+                              itemBuilder: (context, index) {
+                                int col = index % 7;
+                                int fila = index ~/ 7;
+                                final celda = state.tablero.obtenerCeldaEn(
+                                  col,
+                                  fila,
+                                );
 
-                              if (celda == null) return const SizedBox();
+                                if (celda == null) return const SizedBox();
 
-                              final bool esAncla = state.celdaAncla == celda;
-                              final bool esObjetivoValido = state
-                                  .celdasObjetivoValidas
-                                  .contains(celda);
+                                final bool esAncla = state.celdaAncla == celda;
+                                final bool esObjetivoValido = state
+                                    .celdasObjetivoValidas
+                                    .contains(celda);
 
-                              return GestureDetector(
-                                onTap: () {
-                                  if (celda.valor != null) {
-                                    context.read<JuegoTurnoBloc>().add(
-                                      EventoSeleccionarAnclaTablero(celda),
-                                    );
-                                  } else if (esObjetivoValido) {
-                                    context.read<JuegoTurnoBloc>().add(
-                                      EventoColocarNumeroEnObjetivo(celda),
-                                    );
-                                  } else {
-                                    context.read<JuegoTurnoBloc>().add(
-                                      EventoMovimientoInvalido(celda),
-                                    );
-                                  }
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  decoration: BoxDecoration(
-                                    color: esObjetivoValido
-                                        ? Colors.amberAccent
-                                        : colorDeRegion(celda.region),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: esAncla
-                                          ? Colors.white
-                                          : (esObjetivoValido
-                                                ? Colors.amber.shade900
-                                                : Colors.black26),
-                                      width: esAncla
-                                          ? 3.5
-                                          : (esObjetivoValido ? 3 : 1),
-                                    ),
-                                    boxShadow: esObjetivoValido
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.amber.withValues(
-                                                alpha: 0.8,
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (celda.valor != null) {
+                                      context.read<JuegoTurnoBloc>().add(
+                                        EventoSeleccionarAnclaTablero(celda),
+                                      );
+                                    } else if (esObjetivoValido) {
+                                      context.read<JuegoTurnoBloc>().add(
+                                        EventoColocarNumeroEnObjetivo(celda),
+                                      );
+                                    } else {
+                                      context.read<JuegoTurnoBloc>().add(
+                                        EventoMovimientoInvalido(celda),
+                                      );
+                                    }
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    decoration: BoxDecoration(
+                                      color: esObjetivoValido
+                                          ? Colors.amberAccent
+                                          : colorDeRegion(celda.region),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: esAncla
+                                            ? Colors.white
+                                            : (esObjetivoValido
+                                                  ? Colors.amber.shade900
+                                                  : Colors.black26),
+                                        width: esAncla
+                                            ? 3.5
+                                            : (esObjetivoValido ? 3 : 1),
+                                      ),
+                                      boxShadow: esObjetivoValido
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.amber.withValues(
+                                                  alpha: 0.8,
+                                                ),
+                                                blurRadius: 8,
+                                                spreadRadius: 2,
                                               ),
-                                              blurRadius: 8,
-                                              spreadRadius: 2,
-                                            ),
-                                          ]
-                                        : null,
+                                            ]
+                                          : null,
+                                    ),
+                                    child: Center(
+                                      child: celda.valor != null
+                                          ? Text(
+                                              '${celda.valor}',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    celda.region ==
+                                                            Region.amarillo ||
+                                                        celda.region ==
+                                                            Region.blanco
+                                                    ? Colors.black
+                                                    : Colors.white,
+                                              ),
+                                            )
+                                          : (esObjetivoValido
+                                                ? const Icon(
+                                                    Icons.add_circle,
+                                                    color: Colors.black87,
+                                                    size: 22,
+                                                  )
+                                                : null),
+                                    ),
                                   ),
-                                  child: Center(
-                                    child: celda.valor != null
-                                        ? Text(
-                                            '${celda.valor}',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  celda.region ==
-                                                          Region.amarillo ||
-                                                      celda.region ==
-                                                          Region.blanco
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                            ),
-                                          )
-                                        : (esObjetivoValido
-                                              ? const Icon(
-                                                  Icons.add_circle,
-                                                  color: Colors.black87,
-                                                  size: 22,
-                                                )
-                                              : null),
-                                  ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
 
-                      Expanded(
-                        child: Container(
+                        Container(
                           color: Colors.grey.shade100,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              children: [
-                                if (state.dado1 != null &&
-                                    state.dado2 != null) ...[
-                                  const Text(
-                                    'Selecciona cuál dado usarás como ANCLA:',
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            children: [
+                              if (state.dado1 != null &&
+                                  state.dado2 != null) ...[
+                                const Text(
+                                  'Selecciona cuál dado usarás como ANCLA:',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildChipDado(
+                                      context: context,
+                                      valorDado: state.dado1!.valor,
+                                      esAncla: state.indiceDadoAncla == 0,
+                                      onTap: state.puedeActuar
+                                          ? () => context
+                                                .read<JuegoTurnoBloc>()
+                                                .add(
+                                                  EventoSeleccionarDadoAncla(0),
+                                                )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    _buildChipDado(
+                                      context: context,
+                                      valorDado: state.dado2!.valor,
+                                      esAncla: state.indiceDadoAncla == 1,
+                                      onTap: state.puedeActuar
+                                          ? () => context
+                                                .read<JuegoTurnoBloc>()
+                                                .add(
+                                                  EventoSeleccionarDadoAncla(1),
+                                                )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                                if (state.dadoColocar != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Valor a colocar alrededor del ancla: ${state.dadoColocar!.valor}',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _buildChipDado(
-                                        context: context,
-                                        valorDado: state.dado1!.valor,
-                                        esAncla: state.indiceDadoAncla == 0,
-                                        onTap: state.puedeActuar
-                                            ? () => context
-                                                  .read<JuegoTurnoBloc>()
-                                                  .add(
-                                                    EventoSeleccionarDadoAncla(
-                                                      0,
-                                                    ),
-                                                  )
-                                            : null,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      _buildChipDado(
-                                        context: context,
-                                        valorDado: state.dado2!.valor,
-                                        esAncla: state.indiceDadoAncla == 1,
-                                        onTap: state.puedeActuar
-                                            ? () => context
-                                                  .read<JuegoTurnoBloc>()
-                                                  .add(
-                                                    EventoSeleccionarDadoAncla(
-                                                      1,
-                                                    ),
-                                                  )
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                  if (state.dadoColocar != null) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Valor a colocar alrededor del ancla: ${state.dadoColocar!.valor}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
                                 ],
-                                if (state.esMultijugador) ...[
-                                  _construirInfoRonda(state),
-                                  const SizedBox(height: 10),
-                                  if (state.esAnfitrion)
-                                    ElevatedButton.icon(
-                                      key: const Key('boton-lanzar-dados'),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      onPressed:
-                                          _conexionInestable ||
-                                              !state.puedeLanzarDados
-                                          ? null
-                                          : () {
-                                              context
-                                                  .read<JuegoTurnoBloc>()
-                                                  .add(EventoLanzarDados());
-                                            },
-                                      icon: const Icon(Icons.casino),
-                                      label: Text(
-                                        state.esperandoDados
-                                            ? 'Lanzando dados...'
-                                            : state.rondaActiva
-                                            ? 'Ronda en curso'
-                                            : 'Lanzar 2 Dados',
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    )
-                                  else if (!state.rondaActiva)
-                                    const Text(
-                                      'Esperando lanzamiento del anfitrión...',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    )
-                                  else
-                                    Text(
-                                      'Ronda ${state.numeroRonda} en curso',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  if (state.puedeSaltarTurno) ...[
-                                    const SizedBox(height: 8),
-                                    OutlinedButton.icon(
-                                      key: const Key('boton-saltar-turno'),
-                                      onPressed: _conexionInestable
-                                          ? null
-                                          : () {
-                                              context
-                                                  .read<JuegoTurnoBloc>()
-                                                  .add(EventoSaltarTurno());
-                                            },
-                                      icon: const Icon(Icons.skip_next),
-                                      label: const Text('Saltar Turno'),
-                                    ),
-                                  ],
-                                  if (state.accionTurnoCompletada) ...[
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Acción completada. Esperando a los demás...',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ] else
+                                const SizedBox(height: 10),
+                              ],
+                              if (state.esMultijugador) ...[
+                                _construirInfoRonda(state),
+                                const SizedBox(height: 10),
+                                if (state.esAnfitrion)
                                   ElevatedButton.icon(
+                                    key: const Key('boton-lanzar-dados'),
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 24,
                                         vertical: 12,
                                       ),
                                     ),
-                                    onPressed: _conexionInestable
+                                    onPressed:
+                                        _conexionInestable ||
+                                            !state.puedeLanzarDados
                                         ? null
                                         : () {
                                             context.read<JuegoTurnoBloc>().add(
@@ -410,17 +342,84 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                             );
                                           },
                                     icon: const Icon(Icons.casino),
-                                    label: const Text(
-                                      'Lanzar 2 Dados',
-                                      style: TextStyle(fontSize: 16),
+                                    label: Text(
+                                      state.esperandoDados
+                                          ? 'Lanzando dados...'
+                                          : state.rondaActiva
+                                          ? 'Ronda en curso'
+                                          : 'Lanzar 2 Dados',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  )
+                                else if (!state.rondaActiva)
+                                  const Text(
+                                    'Esperando lanzamiento del anfitrión...',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'Ronda ${state.numeroRonda} en curso',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                              ],
-                            ),
+                                if (state.puedeSaltarTurno) ...[
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    key: const Key('boton-saltar-turno'),
+                                    onPressed: _conexionInestable
+                                        ? null
+                                        : () {
+                                            context.read<JuegoTurnoBloc>().add(
+                                              EventoSaltarTurno(),
+                                            );
+                                          },
+                                    icon: const Icon(Icons.skip_next),
+                                    label: const Text('Saltar Turno'),
+                                  ),
+                                ],
+                                if (state.accionTurnoCompletada) ...[
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Acción completada. Esperando a los demás...',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ] else
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  onPressed: _conexionInestable
+                                      ? null
+                                      : () {
+                                          context.read<JuegoTurnoBloc>().add(
+                                            EventoLanzarDados(),
+                                          );
+                                        },
+                                  icon: const Icon(Icons.casino),
+                                  label: const Text(
+                                    'Lanzar 2 Dados',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),

@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../nucleo/configuracion/entorno.dart';
 import '../../dominio/validaciones_autenticacion.dart';
 
 class ServicioAutenticacion {
-  // Nota: Para Flutter Web y escritorio usa 'http://localhost:3000'.
-  // Si usas el emulador de Android, cambia el valor a 'http://10.0.2.2:3000'.
-  static const String _urlBase = 'http://localhost:3000';
+  // La URL se define en `lib/nucleo/configuracion/entorno.dart` mediante
+  // --dart-define=API_URL=... para alternar entre desarrollo y producción.
+  static const String _urlBase = Entorno.apiUrl;
 
   // Método para iniciar sesión (/login)
   Future<Map<String, dynamic>> iniciarSesion(

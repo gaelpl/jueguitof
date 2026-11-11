@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
+import '../../../../nucleo/configuracion/entorno.dart';
+
 class ServicioSocket {
-  static const String _urlBase = 'http://localhost:3000';
+  static const String _urlBase = Entorno.apiUrl;
   static const String _claveToken = 'token_jwt';
 
   ServicioSocket._interno();
@@ -109,7 +111,7 @@ class ServicioSocket {
     final socket_io.Socket socket = socket_io.io(
       _urlBase,
       socket_io.OptionBuilder()
-          .setTransports(['websocket'])
+          .setTransports(['websocket', 'polling'])
           .setAuth({'token': token})
           .disableAutoConnect()
           .enableReconnection()
