@@ -18,7 +18,6 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   String? _tuIdSocket;
   Timer? _temporizadorMensajeAyuda;
 
-  late final StreamSubscription<Map<String, dynamic>> _suscripcionMovimiento;
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
   late final StreamSubscription<bool> _suscripcionRivalDesconectado;
   late final StreamSubscription<Map<String, dynamic>>
@@ -56,7 +55,6 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoSeleccionarAnclaTablero>(_onSeleccionarAnclaTablero);
     on<EventoColocarNumeroEnObjetivo>(_onColocarNumeroEnObjetivo);
     on<EventoLimpiarSeleccionAncla>(_onLimpiarSeleccionAncla);
-    on<EventoMovimientoRemotoRecibido>(_onMovimientoRemotoRecibido);
     on<EventoMovimientoInvalido>(_onMovimientoInvalido);
     on<EventoLimpiarMensajeAyuda>(_onLimpiarMensajeAyuda);
     on<EventoRendirse>(_onRendirse);
@@ -65,16 +63,6 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoPuntuacionesActualizadas>(_onPuntuacionesActualizadas);
     on<EventoPartidaGanada>(_onPartidaGanada);
     on<EventoJugadorSalio>(_onJugadorSalio);
-
-    _suscripcionMovimiento = _servicioSocket.movimientoRecibido.listen((datos) {
-      final int? x = _comoEntero(datos['x'] ?? datos['columna']);
-      final int? y = _comoEntero(datos['y'] ?? datos['fila']);
-      final int? valor = _comoEntero(datos['valor']);
-
-      if (x == null || y == null || valor == null) return;
-
-      add(EventoMovimientoRemotoRecibido(x, y, valor));
-    });
 
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => add(EventoRivalConcedio()),
@@ -277,31 +265,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       ),
     );
 
-    _emitirMovimiento(
-      event.celdaObjetivo.columna,
-      event.celdaObjetivo.fila,
-      dColocar.valor,
-    );
     _emitirPuntuacion(nuevoPuntaje);
-  }
-
-  void _onMovimientoRemotoRecibido(
-    EventoMovimientoRemotoRecibido event,
-    Emitter<JuegoTurnoEstado> emit,
-  ) {
-    final celda = state.tablero.obtenerCeldaEn(event.x, event.y);
-    if (celda == null) return;
-
-    celda.asignarValor(event.valor);
-
-    emit(
-      state.copyWith(
-        tablero: state.tablero,
-        puntuacionTotal: state.jugadores.isEmpty
-            ? calcularPuntuacionTotal(state.tablero)
-            : state.puntuacionTotal,
-      ),
-    );
   }
 
   void _onMovimientoInvalido(
@@ -354,13 +318,36 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   }
 
   void _onRendirse(EventoRendirse event, Emitter<JuegoTurnoEstado> emit) {
-    if (_codigoSala == null || !_servicioSocket.conectado) return;
-
-    try {
-      _servicioSocket.concederPartida(_codigoSala);
-    } catch (_) {
+    if (state is JuegoRendicionLocal ||
+        state is JuegoGanadoPorAbandono ||
+        state is JuegoCanceladoDesconexion ||
+        state is JuegoFinalizadoPorPuntos) {
       return;
     }
+
+    emit(
+      JuegoRendicionLocal(
+        tablero: state.tablero,
+        dado1: state.dado1,
+        dado2: state.dado2,
+        indiceDadoAncla: state.indiceDadoAncla,
+        celdaAncla: state.celdaAncla,
+        celdasObjetivoValidas: state.celdasObjetivoValidas,
+        puntuacionTotal: state.puntuacionTotal,
+        mensajeAyuda: state.mensajeAyuda,
+        jugadores: state.jugadores,
+        puntosParaGanar: state.puntosParaGanar,
+        tuIdSocket: state.tuIdSocket,
+      ),
+    );
+
+    if (_codigoSala != null && _servicioSocket.conectado) {
+      try {
+        _servicioSocket.concederPartida(_codigoSala);
+      } catch (_) {}
+    }
+
+    _servicioSocket.finalizarPartida();
   }
 
   void _onRivalConcedio(
@@ -525,20 +512,6 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     return 'Un jugador';
   }
 
-  void _emitirMovimiento(int x, int y, int valor) {
-    if (_codigoSala == null || !_servicioSocket.conectado) return;
-
-    try {
-      _servicioSocket.enviarMovimiento(_codigoSala, {
-        'x': x,
-        'y': y,
-        'valor': valor,
-      });
-    } catch (_) {
-      return;
-    }
-  }
-
   int? _comoEntero(dynamic valor) {
     if (valor is int) return valor;
     if (valor is num) return valor.toInt();
@@ -550,7 +523,6 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   Future<void> close() async {
     _temporizadorMensajeAyuda?.cancel();
     _temporizadorMensajeAyuda = null;
-    await _suscripcionMovimiento.cancel();
     await _suscripcionRivalConcedio.cancel();
     await _suscripcionRivalDesconectado.cancel();
     await _suscripcionPuntuacionesActualizadas.cancel();

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,7 +36,9 @@ class PantallaJuegoTurno extends StatefulWidget {
 
 class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
   late final StreamSubscription<bool> _suscripcionConexion;
+  Timer? _temporizadorSalidaRendicion;
   bool _conexionInestable = false;
+  bool _rendicionNotificada = false;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
 
   @override
   void dispose() {
+    _temporizadorSalidaRendicion?.cancel();
     _suscripcionConexion.cancel();
     super.dispose();
   }
@@ -78,47 +82,62 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             if (state is JuegoCanceladoDesconexion) {
               _mostrarDialogoDesconexion(context);
             }
+            if (state is JuegoRendicionLocal && !_rendicionNotificada) {
+              _rendicionNotificada = true;
+              _mostrarDialogoRendicion(context);
+            }
             if (state is JuegoFinalizadoPorPuntos) {
               _mostrarDialogoVictoriaPorPuntos(context, state);
             }
           },
           builder: (context, state) {
             return SafeArea(
-              child: Column(
-                children: [
-                  if (_conexionInestable) _construirBannerConexion(),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (child, animation) {
-                      final deslizamiento = Tween<Offset>(
-                        begin: const Offset(0, -0.2),
-                        end: Offset.zero,
-                      ).animate(animation);
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: deslizamiento,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: state.mensajeAyuda == null
-                        ? const SizedBox.shrink(
-                            key: ValueKey('sin-mensaje-ayuda'),
-                          )
-                        : _construirBannerAyuda(state.mensajeAyuda!),
-                  ),
-                  _construirMarcador(context, state),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double ladoTablero = math.max(
+                    160.0,
+                    math.min(
+                      constraints.maxWidth - 24,
+                      constraints.maxHeight * 0.46,
+                    ),
+                  );
 
-                  Expanded(
-                    child: AbsorbPointer(
-                      absorbing: _conexionInestable,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: AspectRatio(
-                          aspectRatio: 1,
+                  return Column(
+                    children: [
+                      if (_conexionInestable) _construirBannerConexion(),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          final deslizamiento = Tween<Offset>(
+                            begin: const Offset(0, -0.2),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: deslizamiento,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: state.mensajeAyuda == null
+                            ? const SizedBox.shrink(
+                                key: ValueKey('sin-mensaje-ayuda'),
+                              )
+                            : _construirBannerAyuda(state.mensajeAyuda!),
+                      ),
+                      _construirMarcador(context, state),
+
+                      _construirLeyenda(state),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        key: const Key('tablero-juego'),
+                        width: ladoTablero,
+                        height: ladoTablero,
+                        child: AbsorbPointer(
+                          absorbing: _conexionInestable,
                           child: GridView.builder(
                             physics: const NeverScrollableScrollPhysics(),
                             gridDelegate:
@@ -218,105 +237,112 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                           ),
                         ),
                       ),
-                    ),
-                  ),
 
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    color: Colors.grey.shade100,
-                    child: Column(
-                      children: [
-                        if (state.dado1 != null && state.dado2 != null) ...[
-                          const Text(
-                            'Selecciona cuál dado usarás como ANCLA:',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildChipDado(
-                                context: context,
-                                valorDado: state.dado1!.valor,
-                                esAncla: state.indiceDadoAncla == 0,
-                                onTap: () => context.read<JuegoTurnoBloc>().add(
-                                  EventoSeleccionarDadoAncla(0),
+                      Expanded(
+                        child: Container(
+                          color: Colors.grey.shade100,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              children: [
+                                if (state.dado1 != null &&
+                                    state.dado2 != null) ...[
+                                  const Text(
+                                    'Selecciona cuál dado usarás como ANCLA:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildChipDado(
+                                        context: context,
+                                        valorDado: state.dado1!.valor,
+                                        esAncla: state.indiceDadoAncla == 0,
+                                        onTap: () => context
+                                            .read<JuegoTurnoBloc>()
+                                            .add(EventoSeleccionarDadoAncla(0)),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _buildChipDado(
+                                        context: context,
+                                        valorDado: state.dado2!.valor,
+                                        esAncla: state.indiceDadoAncla == 1,
+                                        onTap: () => context
+                                            .read<JuegoTurnoBloc>()
+                                            .add(EventoSeleccionarDadoAncla(1)),
+                                      ),
+                                    ],
+                                  ),
+                                  if (state.dadoColocar != null) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Valor a colocar alrededor del ancla: ${state.dadoColocar!.valor}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 10),
+                                ],
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  onPressed: _conexionInestable
+                                      ? null
+                                      : () {
+                                          context.read<JuegoTurnoBloc>().add(
+                                            EventoLanzarDados(),
+                                          );
+                                        },
+                                  icon: const Icon(Icons.casino),
+                                  label: const Text(
+                                    'Lanzar 2 Dados',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              _buildChipDado(
-                                context: context,
-                                valorDado: state.dado2!.valor,
-                                esAncla: state.indiceDadoAncla == 1,
-                                onTap: () => context.read<JuegoTurnoBloc>().add(
-                                  EventoSeleccionarDadoAncla(1),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade700,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  onPressed: _conexionInestable
+                                      ? null
+                                      : () {
+                                          context.read<JuegoTurnoBloc>().add(
+                                            EventoRendirse(),
+                                          );
+                                        },
+                                  icon: const Icon(Icons.flag),
+                                  label: const Text(
+                                    'Rendirse',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          if (state.dadoColocar != null) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              'Valor a colocar alrededor del ancla: ${state.dadoColocar!.valor}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                              ],
                             ),
-                          ],
-                          const SizedBox(height: 10),
-                        ],
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: _conexionInestable
-                              ? null
-                              : () {
-                                  context.read<JuegoTurnoBloc>().add(
-                                    EventoLanzarDados(),
-                                  );
-                                },
-                          icon: const Icon(Icons.casino),
-                          label: const Text(
-                            'Lanzar 2 Dados',
-                            style: TextStyle(fontSize: 16),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade700,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: _conexionInestable
-                              ? null
-                              : () {
-                                  context.read<JuegoTurnoBloc>().add(
-                                    EventoRendirse(),
-                                  );
-                                },
-                          icon: const Icon(Icons.flag),
-                          label: const Text(
-                            'Rendirse',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             );
           },
@@ -405,6 +431,97 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _construirLeyenda(JuegoTurnoEstado state) {
+    final List<ProgresoZona> progresos = calcularProgresoZonas(state.tablero);
+
+    if (progresos.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 72,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        scrollDirection: Axis.horizontal,
+        itemCount: progresos.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          return _construirEntradaLeyenda(progresos[index]);
+        },
+      ),
+    );
+  }
+
+  Widget _construirEntradaLeyenda(ProgresoZona progreso) {
+    final bool completada = progreso.completada;
+    final Color color = colorDeRegion(progreso.region);
+    final TextStyle estiloTexto = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      decoration: completada ? TextDecoration.lineThrough : null,
+      decorationThickness: 2,
+    );
+
+    return Container(
+      key: Key('leyenda-region-${progreso.region.name}'),
+      width: 132,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: completada ? Colors.grey.shade200 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: completada ? 0.35 : 0.8),
+        ),
+      ),
+      child: Opacity(
+        opacity: completada ? 0.55 : 1,
+        child: Row(
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black26),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          nombreDeRegion(progreso.region),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: estiloTexto,
+                        ),
+                      ),
+                      if (completada)
+                        Icon(
+                          Icons.check_circle,
+                          size: 14,
+                          color: Colors.green.shade700,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${progreso.puntos} pts',
+                    style: estiloTexto.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -563,6 +680,52 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
           ),
         ],
       ),
+    );
+  }
+
+  void _mostrarDialogoRendicion(BuildContext context) {
+    _temporizadorSalidaRendicion?.cancel();
+    bool navegando = false;
+    late BuildContext dialogContext;
+
+    void volverAlMenu() {
+      if (navegando || !mounted) return;
+      navegando = true;
+      _temporizadorSalidaRendicion?.cancel();
+
+      if (Navigator.of(dialogContext).canPop()) {
+        Navigator.of(dialogContext).pop();
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const PantallaMenuMapas()),
+        (route) => false,
+      );
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (contextDialogo) {
+        dialogContext = contextDialogo;
+        return AlertDialog(
+          title: const Text('Te has rendido'),
+          content: const Text(
+            'Has abandonado la partida. Volverás al menú de mapas en unos segundos.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: volverAlMenu,
+              child: const Text('Volver al menú de mapas'),
+            ),
+          ],
+        );
+      },
+    );
+
+    _temporizadorSalidaRendicion = Timer(
+      const Duration(seconds: 2),
+      volverAlMenu,
     );
   }
 

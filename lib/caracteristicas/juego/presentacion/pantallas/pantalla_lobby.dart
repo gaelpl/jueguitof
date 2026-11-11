@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../datos/mapas_oficiales.dart';
+import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
 import '../blocs/lobby_bloc/lobby_bloc.dart';
 import 'pantalla_seleccion_inicial.dart';
@@ -13,14 +14,27 @@ const Color _textoPrincipal = Color(0xFF0F172A);
 const Color _textoSecundario = Color(0xFF64748B);
 const Color _fondoCampo = Color(0xFFF1F5F9);
 
-class PantallaLobby extends StatefulWidget {
+class PantallaLobby extends StatelessWidget {
   const PantallaLobby({super.key});
 
   @override
-  State<PantallaLobby> createState() => _PantallaLobbyState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => LobbyBloc(servicioSocket: ServicioSocket.instancia),
+      child: const _PantallaLobbyContenido(),
+    );
+  }
 }
 
-class _PantallaLobbyState extends State<PantallaLobby> {
+class _PantallaLobbyContenido extends StatefulWidget {
+  const _PantallaLobbyContenido();
+
+  @override
+  State<_PantallaLobbyContenido> createState() =>
+      _PantallaLobbyContenidoState();
+}
+
+class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
   final GlobalKey<FormState> _formularioKey = GlobalKey<FormState>();
   final TextEditingController _codigoControlador = TextEditingController();
 
@@ -69,80 +83,77 @@ class _PantallaLobbyState extends State<PantallaLobby> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => LobbyBloc(),
-      child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1E1B4B), _azulProfundo, Color(0xFF0284C7)],
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1E1B4B), _azulProfundo, Color(0xFF0284C7)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -90,
+              right: -70,
+              child: _circuloDecorativo(
+                240,
+                Colors.white.withValues(alpha: 0.06),
+              ),
             ),
-          ),
-          child: Stack(
-            children: [
+            Positioned(
+              bottom: -110,
+              left: -80,
+              child: _circuloDecorativo(280, _cian.withValues(alpha: 0.18)),
+            ),
+            if (Navigator.of(context).canPop())
               Positioned(
-                top: -90,
-                right: -70,
-                child: _circuloDecorativo(
-                  240,
-                  Colors.white.withValues(alpha: 0.06),
-                ),
-              ),
-              Positioned(
-                bottom: -110,
-                left: -80,
-                child: _circuloDecorativo(280, _cian.withValues(alpha: 0.18)),
-              ),
-              if (Navigator.of(context).canPop())
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: IconButton(
-                        tooltip: 'Volver',
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.white,
-                        ),
+                top: 0,
+                left: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: IconButton(
+                      tooltip: 'Volver',
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-              SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 40,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: BlocConsumer<LobbyBloc, LobbyEstado>(
-                        listener: (context, estado) {
-                          if (estado is ErrorLobby) {
-                            _mostrarMensaje(estado.mensaje, esError: true);
-                          }
+              ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 40,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: BlocConsumer<LobbyBloc, LobbyEstado>(
+                      listener: (context, estado) {
+                        if (estado is ErrorLobby) {
+                          _mostrarMensaje(estado.mensaje, esError: true);
+                        }
 
-                          if (estado is PartidaLista && !_navegacionRealizada) {
-                            _navegacionRealizada = true;
-                            _irAlJuego(estado);
-                          }
-                        },
-                        builder: (context, estado) {
-                          return _construirTarjeta(context, estado);
-                        },
-                      ),
+                        if (estado is PartidaLista && !_navegacionRealizada) {
+                          _navegacionRealizada = true;
+                          _irAlJuego(estado);
+                        }
+                      },
+                      builder: (context, estado) {
+                        return _construirTarjeta(context, estado);
+                      },
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

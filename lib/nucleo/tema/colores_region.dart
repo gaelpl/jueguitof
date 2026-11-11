@@ -28,3 +28,38 @@ Color colorDeRegion(Region region) {
       return const Color(0xFFFF9800);
   }
 }
+
+String nombreDeRegion(Region region) {
+  switch (region) {
+    case Region.rojoNoroeste:
+      return 'Rojo NO';
+    case Region.rojoSureste:
+      return 'Rojo SE';
+    case Region.rojoNoreste:
+      return 'Rojo NE';
+    case Region.rojoSuroeste:
+      return 'Rojo SO';
+    case Region.amarillo:
+      return 'Amarillo';
+    case Region.verdeNoroeste:
+      return 'Verde NO';
+    case Region.verdeEste:
+      return 'Verde E';
+    case Region.azulNorte:
+      return 'Azul N';
+    case Region.azulSureste:
+      return 'Azul SE';
+    case Region.lilaNorte:
+      return 'Lila N';
+    case Region.lilaSuroeste:
+      return 'Lila SO';
+    case Region.lilaSureste:
+      return 'Lila SE';
+    case Region.blanco:
+      return 'Blanco';
+    case Region.naranjaNorte:
+      return 'Naranja N';
+    case Region.naranjaSur:
+      return 'Naranja S';
+  }
+}

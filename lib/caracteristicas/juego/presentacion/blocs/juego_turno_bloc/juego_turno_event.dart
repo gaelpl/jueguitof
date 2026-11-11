@@ -33,14 +33,6 @@ class EventoColocarNumeroEnObjetivo extends JuegoTurnoEvento {
 /// Evento para deseleccionar el ancla actual o reiniciar la selección.
 class EventoLimpiarSeleccionAncla extends JuegoTurnoEvento {}
 
-class EventoMovimientoRemotoRecibido extends JuegoTurnoEvento {
-  final int x;
-  final int y;
-  final int valor;
-
-  EventoMovimientoRemotoRecibido(this.x, this.y, this.valor);
-}
-
 /// Evento al tocar una casilla que no es un ancla válida ni un objetivo permitido.
 class EventoMovimientoInvalido extends JuegoTurnoEvento {
   final Celda celda;

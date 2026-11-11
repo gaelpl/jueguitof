@@ -463,6 +463,54 @@ String obtenerMensajeMovimientoInvalido({
   );
 }
 
+class ProgresoZona {
+  final Region region;
+  final Tipo tipo;
+  final int totalCeldas;
+  final int celdasCompletadas;
+  final int puntos;
+
+  const ProgresoZona({
+    required this.region,
+    required this.tipo,
+    required this.totalCeldas,
+    required this.celdasCompletadas,
+    required this.puntos,
+  });
+
+  bool get completada => totalCeldas > 0 && celdasCompletadas == totalCeldas;
+}
+
+/// Calcula el progreso y los puntos de cada región que tiene celdas en el tablero.
+List<ProgresoZona> calcularProgresoZonas(Tablero tablero) {
+  final regiones = tablero.celdas.map((celda) => celda.region).toSet();
+  final progresos = <ProgresoZona>[];
+
+  for (final region in regiones) {
+    final zona = tablero.obtenerZona(region);
+    if (zona == null) continue;
+
+    final celdas = tablero.celdas.where((celda) => celda.region == region);
+    final totalCeldas = celdas.length;
+    final celdasCompletadas = celdas
+        .where((celda) => celda.valor != null)
+        .length;
+
+    progresos.add(
+      ProgresoZona(
+        region: region,
+        tipo: zona.tipo,
+        totalCeldas: totalCeldas,
+        celdasCompletadas: celdasCompletadas,
+        puntos: zona.tipo.puntuaciones[1] ?? 0,
+      ),
+    );
+  }
+
+  progresos.sort((a, b) => a.region.index.compareTo(b.region.index));
+  return progresos;
+}
+
 /// Calcula la puntuación total del tablero otorgando la puntuación de 1.er lugar al completar cada bloque al 100%.
 int calcularPuntuacionTotal(Tablero tablero) {
   int puntajeTotal = 0;

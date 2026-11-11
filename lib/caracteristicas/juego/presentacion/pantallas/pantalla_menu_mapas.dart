@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
 import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/mapas_oficiales.dart';
+import 'pantalla_lobby.dart';
 import 'pantalla_seleccion_inicial.dart';
 
 const Color _azulProfundo = Color(0xFF312E81);
@@ -99,7 +100,10 @@ class PantallaMenuMapas extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            _iconoDialogo(Icons.delete_forever_rounded, const Color(0xFFDC2626)),
+            _iconoDialogo(
+              Icons.delete_forever_rounded,
+              const Color(0xFFDC2626),
+            ),
             const SizedBox(width: 12),
             const Expanded(child: Text('Borrar cuenta')),
           ],
@@ -174,6 +178,8 @@ class PantallaMenuMapas extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _construirAccesoMultijugador(context),
+                      const SizedBox(height: 26),
                       Row(
                         children: [
                           const Expanded(
@@ -219,7 +225,9 @@ class PantallaMenuMapas extends StatelessWidget {
                       const SizedBox(height: 22),
                       LayoutBuilder(
                         builder: (context, constraints) {
-                          final int columnas = constraints.maxWidth >= 640 ? 2 : 1;
+                          final int columnas = constraints.maxWidth >= 640
+                              ? 2
+                              : 1;
                           const double separacion = 16;
                           final double anchoTarjeta = columnas == 1
                               ? constraints.maxWidth
@@ -249,6 +257,87 @@ class PantallaMenuMapas extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _construirAccesoMultijugador(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_azulProfundo, _cian],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: _azulProfundo.withValues(alpha: 0.3),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () {
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const PantallaLobby()));
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.groups_2_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Jugar multijugador',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Crea una sala o únete con un código para jugar de 2 a 5 jugadores.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white70,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -310,10 +399,7 @@ class PantallaMenuMapas extends StatelessWidget {
                         SizedBox(height: 2),
                         Text(
                           'Tu aventura continúa',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.white70),
                         ),
                       ],
                     ),

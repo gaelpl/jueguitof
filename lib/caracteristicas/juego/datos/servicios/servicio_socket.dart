@@ -22,8 +22,6 @@ class ServicioSocket {
       StreamController<String>.broadcast();
   final StreamController<String> _controladorErrorConexion =
       StreamController<String>.broadcast();
-  final StreamController<Map<String, dynamic>> _controladorMovimientoRecibido =
-      StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<bool> _controladorRivalConcedio =
       StreamController<bool>.broadcast();
   final StreamController<bool> _controladorRivalDesconectado =
@@ -50,8 +48,6 @@ class ServicioSocket {
       _controladorPartidaLista.stream;
   Stream<String> get errorSala => _controladorErrorSala.stream;
   Stream<String> get errorConexion => _controladorErrorConexion.stream;
-  Stream<Map<String, dynamic>> get movimientoRecibido =>
-      _controladorMovimientoRecibido.stream;
   Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
   Stream<bool> get rivalDesconectado => _controladorRivalDesconectado.stream;
   Stream<bool> get conexionInestable => _controladorConexionInestable.stream;
@@ -192,12 +188,6 @@ class ServicioSocket {
       );
     });
 
-    socket.on('movimiento_recibido', (datos) {
-      if (datos is Map) {
-        _controladorMovimientoRecibido.add(Map<String, dynamic>.from(datos));
-      }
-    });
-
     socket.on('rival_concedio', (_) {
       _controladorRivalConcedio.add(true);
     });
@@ -244,17 +234,6 @@ class ServicioSocket {
     socket.emit('puntuacion_actualizada', {
       'codigoSala': codigoSala.trim().toUpperCase(),
       'puntuacion': puntuacion,
-    });
-  }
-
-  void enviarMovimiento(String codigoSala, Map<String, dynamic> datos) {
-    final socket_io.Socket? socket = _socket;
-    if (socket == null) {
-      throw StateError('El socket no está inicializado.');
-    }
-    socket.emit('movimiento_tablero', {
-      ...datos,
-      'codigoSala': codigoSala.trim().toUpperCase(),
     });
   }
 

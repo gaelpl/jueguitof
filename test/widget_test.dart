@@ -176,5 +176,108 @@ void main() {
       expect(find.text('7 pts'), findsOneWidget);
       expect(find.text('Meta: 20 pts'), findsOneWidget);
     });
+
+    testWidgets('mantiene el tamaño del tablero al lanzar los dados', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3),
+          Celda(columna: 0, fila: 1, region: Region.verdeNoroeste),
+        ],
+        zonas: [
+          Zona(region: Region.amarillo, tipo: TipoAmarillo()),
+          Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: PantallaJuegoTurno(tablero: tablero)),
+      );
+      await tester.pumpAndSettle();
+
+      final tableroFinder = find.byKey(const Key('tablero-juego'));
+      final Size tamanoInicial = tester.getSize(tableroFinder);
+
+      await tester.tap(find.text('Lanzar 2 Dados'));
+      await tester.pumpAndSettle();
+
+      expect(tester.getSize(tableroFinder), tamanoInicial);
+    });
+
+    testWidgets('tacha la leyenda de una zona completada', (
+      WidgetTester tester,
+    ) async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+          Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: 3),
+          Celda(columna: 2, fila: 0, region: Region.verdeNoroeste, valor: 1),
+          Celda(columna: 3, fila: 0, region: Region.verdeNoroeste),
+        ],
+        zonas: [
+          Zona(region: Region.azulNorte, tipo: TipoAzul()),
+          Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: PantallaJuegoTurno(tablero: tablero)),
+      );
+      await tester.pumpAndSettle();
+
+      final Text azul = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('leyenda-region-azulNorte')),
+          matching: find.text('Azul N'),
+        ),
+      );
+      final Text verde = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('leyenda-region-verdeNoroeste')),
+          matching: find.text('Verde NO'),
+        ),
+      );
+
+      expect(azul.style?.decoration, TextDecoration.lineThrough);
+      expect(verde.style?.decoration, isNot(TextDecoration.lineThrough));
+    });
+
+    testWidgets('muestra confirmación y vuelve al menú al rendirse', (
+      WidgetTester tester,
+    ) async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3)],
+        zonas: [Zona(region: Region.amarillo, tipo: TipoAmarillo())],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: PantallaJuegoTurno(tablero: tablero)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Rendirse'));
+      await tester.pump();
+
+      expect(find.text('Te has rendido'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Selecciona un mapa'), findsOneWidget);
+    });
   });
 }

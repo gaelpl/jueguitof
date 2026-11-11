@@ -357,6 +357,84 @@ void main() {
     });
   });
 
+  group('Progreso de zonas para la leyenda', () {
+    test('marca una zona incompleta y conserva sus puntos', () {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+          Celda(columna: 1, fila: 0, region: Region.azulNorte),
+        ],
+        zonas: [Zona(region: Region.azulNorte, tipo: TipoAzul())],
+      );
+
+      final progreso = calcularProgresoZonas(tablero).single;
+
+      expect(progreso.totalCeldas, 2);
+      expect(progreso.celdasCompletadas, 1);
+      expect(progreso.puntos, 7);
+      expect(progreso.completada, isFalse);
+    });
+
+    test('marca una zona completa cuando todas sus celdas tienen valor', () {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+          Celda(columna: 1, fila: 0, region: Region.azulNorte, valor: 3),
+        ],
+        zonas: [Zona(region: Region.azulNorte, tipo: TipoAzul())],
+      );
+
+      final progreso = calcularProgresoZonas(tablero).single;
+
+      expect(progreso.celdasCompletadas, 2);
+      expect(progreso.completada, isTrue);
+    });
+
+    test('omite zonas declaradas sin celdas en el tablero', () {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+        ],
+        zonas: [
+          Zona(region: Region.azulNorte, tipo: TipoAzul()),
+          Zona(region: Region.rojoSureste, tipo: TipoRojo()),
+        ],
+      );
+
+      final progresos = calcularProgresoZonas(tablero);
+
+      expect(progresos, hasLength(1));
+      expect(progresos.single.region, Region.azulNorte);
+    });
+  });
+
+  group('Rendición local de JuegoTurnoBloc', () {
+    test('emite JuegoRendicionLocal sin código de sala', () async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+        ],
+        zonas: [Zona(region: Region.azulNorte, tipo: TipoAzul())],
+      );
+      final bloc = JuegoTurnoBloc(tablero);
+
+      bloc.add(EventoRendirse());
+      await pumpEventQueue();
+
+      expect(bloc.state, isA<JuegoRendicionLocal>());
+
+      await bloc.close();
+    });
+  });
+
   group('Pruebas de JuegoTurnoBloc con 2 Dados', () {
     late Tablero tablero;
     late JuegoTurnoBloc bloc;
