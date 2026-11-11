@@ -11,6 +11,40 @@ class EventoLanzarDados extends JuegoTurnoEvento {
   EventoLanzarDados({this.dado1Forzado, this.dado2Forzado});
 }
 
+class EventoDadosLanzados extends JuegoTurnoEvento {
+  final Dado dado1;
+  final Dado dado2;
+  final String? anfitrion;
+  final int numeroRonda;
+  final int segundosRestantes;
+  final int duracionRondaSegundos;
+
+  EventoDadosLanzados({
+    required this.dado1,
+    required this.dado2,
+    this.anfitrion,
+    this.numeroRonda = 1,
+    this.segundosRestantes = 300,
+    this.duracionRondaSegundos = 300,
+  });
+}
+
+class EventoSaltarTurno extends JuegoTurnoEvento {}
+
+class EventoTickRonda extends JuegoTurnoEvento {}
+
+class EventoRondaLista extends JuegoTurnoEvento {
+  final String? anfitrion;
+  final int numeroRonda;
+  final String motivo;
+
+  EventoRondaLista({
+    this.anfitrion,
+    this.numeroRonda = 0,
+    this.motivo = 'completada',
+  });
+}
+
 /// Evento para seleccionar cuál de los dos dados se usará como valor de Ancla.
 /// El otro dado automáticamente se convertirá en el valor a colocar en el tablero.
 class EventoSeleccionarDadoAncla extends JuegoTurnoEvento {
@@ -77,10 +111,12 @@ class EventoJugadorSalio extends JuegoTurnoEvento {
   final String usuario;
   final bool fueDesconexion;
   final List<JugadorPartida> jugadores;
+  final String? anfitrion;
 
   EventoJugadorSalio({
     required this.usuario,
     required this.fueDesconexion,
     this.jugadores = const [],
+    this.anfitrion,
   });
 }

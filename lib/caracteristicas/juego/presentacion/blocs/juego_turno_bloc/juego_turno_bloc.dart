@@ -17,9 +17,12 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final Duration _duracionMensajeAyuda;
   String? _tuIdSocket;
   Timer? _temporizadorMensajeAyuda;
+  Timer? _temporizadorRonda;
 
   late final StreamSubscription<bool> _suscripcionRivalConcedio;
   late final StreamSubscription<bool> _suscripcionRivalDesconectado;
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionDadosLanzados;
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionRondaLista;
   late final StreamSubscription<Map<String, dynamic>>
   _suscripcionPuntuacionesActualizadas;
   late final StreamSubscription<Map<String, dynamic>> _suscripcionPartidaGanada;
@@ -36,6 +39,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     List<JugadorPartida> jugadores = const [],
     int? puntosParaGanar,
     String? tuIdSocket,
+    String? anfitrion,
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
        _tuIdSocket = tuIdSocket,
@@ -48,9 +52,14 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
            jugadores: jugadores,
            puntosParaGanar: puntosParaGanar,
            tuIdSocket: tuIdSocket,
+           anfitrion: anfitrion,
          ),
        ) {
     on<EventoLanzarDados>(_onLanzarDados);
+    on<EventoDadosLanzados>(_onDadosLanzados);
+    on<EventoSaltarTurno>(_onSaltarTurno);
+    on<EventoRondaLista>(_onRondaLista);
+    on<EventoTickRonda>(_onTickRonda);
     on<EventoSeleccionarDadoAncla>(_onSeleccionarDadoAncla);
     on<EventoSeleccionarAnclaTablero>(_onSeleccionarAnclaTablero);
     on<EventoColocarNumeroEnObjetivo>(_onColocarNumeroEnObjetivo);
@@ -71,6 +80,38 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     _suscripcionRivalDesconectado = _servicioSocket.rivalDesconectado.listen(
       (_) => add(EventoRivalDesconectado()),
     );
+
+    _suscripcionDadosLanzados = _servicioSocket.dadosLanzados.listen((datos) {
+      final int? dado1 = _comoEntero(datos['dado1']);
+      final int? dado2 = _comoEntero(datos['dado2']);
+
+      if (dado1 == null || dado2 == null) return;
+
+      add(
+        EventoDadosLanzados(
+          dado1: Dado(dado1),
+          dado2: Dado(dado2),
+          anfitrion: datos['anfitrion']?.toString(),
+          numeroRonda: _comoEntero(datos['numeroRonda']) ?? 1,
+          segundosRestantes:
+              _comoEntero(datos['segundosRestantes']) ??
+              _comoEntero(datos['duracionRondaSegundos']) ??
+              300,
+          duracionRondaSegundos:
+              _comoEntero(datos['duracionRondaSegundos']) ?? 300,
+        ),
+      );
+    });
+
+    _suscripcionRondaLista = _servicioSocket.rondaLista.listen((datos) {
+      add(
+        EventoRondaLista(
+          anfitrion: datos['anfitrion']?.toString(),
+          numeroRonda: _comoEntero(datos['numeroRonda']) ?? 0,
+          motivo: datos['motivo']?.toString() ?? 'completada',
+        ),
+      );
+    });
 
     _suscripcionPuntuacionesActualizadas = _servicioSocket
         .puntuacionesActualizadas
@@ -107,6 +148,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           usuario: _nombreJugador(datos),
           fueDesconexion: false,
           jugadores: _parsearJugadores(datos['jugadores']),
+          anfitrion: datos['anfitrion']?.toString(),
         ),
       );
     });
@@ -118,6 +160,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
               usuario: _nombreJugador(datos),
               fueDesconexion: true,
               jugadores: _parsearJugadores(datos['jugadores']),
+              anfitrion: datos['anfitrion']?.toString(),
             ),
           );
         });
@@ -129,6 +172,36 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   }
 
   void _onLanzarDados(EventoLanzarDados event, Emitter<JuegoTurnoEstado> emit) {
+    if (state.esMultijugador) {
+      if (!state.esAnfitrion) {
+        _mostrarMensajeAyuda('Solo el anfitrión puede lanzar los dados.', emit);
+        return;
+      }
+
+      if (!state.puedeLanzarDados) return;
+
+      if (_codigoSala == null || !_servicioSocket.conectado) {
+        _mostrarMensajeAyuda(
+          'No hay conexión con el servidor de partidas.',
+          emit,
+        );
+        return;
+      }
+
+      emit(state.copyWith(esperandoDados: true, limpiarMensajeAyuda: true));
+
+      try {
+        _servicioSocket.lanzarDados(_codigoSala);
+      } catch (_) {
+        emit(state.copyWith(esperandoDados: false));
+        _mostrarMensajeAyuda(
+          'No se pudo solicitar el lanzamiento de dados.',
+          emit,
+        );
+      }
+      return;
+    }
+
     final d1 = event.dado1Forzado ?? Dado.lanzar();
     final d2 = event.dado2Forzado ?? Dado.lanzar();
 
@@ -142,10 +215,118 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     );
   }
 
+  void _onDadosLanzados(
+    EventoDadosLanzados event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
+
+    emit(
+      state.copyWith(
+        dado1: event.dado1,
+        dado2: event.dado2,
+        anfitrion: event.anfitrion ?? state.anfitrion,
+        numeroRonda: event.numeroRonda,
+        rondaActiva: true,
+        accionTurnoCompletada: false,
+        esperandoDados: false,
+        segundosRestantesRonda: event.segundosRestantes,
+        duracionRondaSegundos: event.duracionRondaSegundos,
+        limpiarAncla: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
+
+    _iniciarTemporizadorRonda();
+  }
+
+  void _onSaltarTurno(EventoSaltarTurno event, Emitter<JuegoTurnoEstado> emit) {
+    if (!state.puedeSaltarTurno) return;
+
+    emit(
+      state.copyWith(
+        accionTurnoCompletada: true,
+        limpiarAncla: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
+
+    _emitirAccionTurno();
+  }
+
+  void _onRondaLista(EventoRondaLista event, Emitter<JuegoTurnoEstado> emit) {
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
+
+    emit(
+      state.copyWith(
+        anfitrion: event.anfitrion ?? state.anfitrion,
+        numeroRonda: event.numeroRonda,
+        rondaActiva: false,
+        accionTurnoCompletada: false,
+        esperandoDados: false,
+        segundosRestantesRonda: 0,
+        limpiarDados: true,
+        limpiarAncla: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
+
+    final String mensaje = event.motivo == 'tiempo'
+        ? 'El tiempo de la ronda terminó. Se avanzó automáticamente.'
+        : 'Ronda completada. El anfitrión puede lanzar los dados.';
+    _mostrarMensajeAyuda(mensaje, emit);
+  }
+
+  void _onTickRonda(EventoTickRonda event, Emitter<JuegoTurnoEstado> emit) {
+    if (!state.rondaActiva || state.segundosRestantesRonda <= 0) return;
+
+    emit(
+      state.copyWith(segundosRestantesRonda: state.segundosRestantesRonda - 1),
+    );
+  }
+
+  void _iniciarTemporizadorRonda() {
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
+
+    if (!state.rondaActiva) return;
+
+    _temporizadorRonda = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (isClosed) {
+        timer.cancel();
+        return;
+      }
+
+      final int restantes = state.segundosRestantesRonda;
+      add(EventoTickRonda());
+
+      if (restantes <= 1) {
+        timer.cancel();
+        _temporizadorRonda = null;
+      }
+    });
+  }
+
+  bool _bloquearSiNoPuedeActuar(Emitter<JuegoTurnoEstado> emit) {
+    if (!state.esMultijugador || state.puedeActuar) return false;
+
+    _mostrarMensajeAyuda(
+      state.accionTurnoCompletada
+          ? 'Ya completaste tu acción. Espera a los demás jugadores.'
+          : 'Espera el lanzamiento de dados del anfitrión.',
+      emit,
+    );
+    return true;
+  }
+
   void _onSeleccionarDadoAncla(
     EventoSeleccionarDadoAncla event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (_bloquearSiNoPuedeActuar(emit)) return;
+
     if (state.dado1 != null && state.dado2 != null) {
       emit(
         state.copyWith(
@@ -161,6 +342,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoSeleccionarAnclaTablero event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (_bloquearSiNoPuedeActuar(emit)) return;
+
     if (state.dado1 == null || state.dado2 == null) {
       _mostrarMensajeAyuda(mensajeDadosNoLanzados(), emit);
       return;
@@ -222,6 +405,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     EventoColocarNumeroEnObjetivo event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (_bloquearSiNoPuedeActuar(emit)) return;
+
     final dColocar = state.dadoColocar;
 
     if (dColocar == null) {
@@ -259,19 +444,25 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         tablero: state.tablero,
         puntuacionTotal: nuevoPuntaje,
         jugadores: jugadoresActualizados,
+        accionTurnoCompletada: state.esMultijugador,
         limpiarAncla: true,
-        limpiarDados: true,
+        limpiarDados: !state.esMultijugador,
         limpiarMensajeAyuda: true,
       ),
     );
 
     _emitirPuntuacion(nuevoPuntaje);
+    if (state.esMultijugador) {
+      _emitirAccionTurno();
+    }
   }
 
   void _onMovimientoInvalido(
     EventoMovimientoInvalido event,
     Emitter<JuegoTurnoEstado> emit,
   ) {
+    if (_bloquearSiNoPuedeActuar(emit)) return;
+
     if (state.dado1 == null || state.dado2 == null) {
       _mostrarMensajeAyuda(mensajeDadosNoLanzados(), emit);
       return;
@@ -325,6 +516,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       return;
     }
 
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
     emit(
       JuegoRendicionLocal(
         tablero: state.tablero,
@@ -338,6 +531,13 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         jugadores: state.jugadores,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
+        anfitrion: state.anfitrion,
+        numeroRonda: state.numeroRonda,
+        rondaActiva: state.rondaActiva,
+        accionTurnoCompletada: state.accionTurnoCompletada,
+        esperandoDados: state.esperandoDados,
+        segundosRestantesRonda: state.segundosRestantesRonda,
+        duracionRondaSegundos: state.duracionRondaSegundos,
       ),
     );
 
@@ -356,6 +556,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   ) {
     if (state is JuegoFinalizadoPorPuntos) return;
 
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
     _servicioSocket.finalizarPartida();
     emit(
       JuegoGanadoPorAbandono(
@@ -370,6 +572,13 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         jugadores: state.jugadores,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
+        anfitrion: state.anfitrion,
+        numeroRonda: state.numeroRonda,
+        rondaActiva: state.rondaActiva,
+        accionTurnoCompletada: state.accionTurnoCompletada,
+        esperandoDados: state.esperandoDados,
+        segundosRestantesRonda: state.segundosRestantesRonda,
+        duracionRondaSegundos: state.duracionRondaSegundos,
       ),
     );
   }
@@ -380,6 +589,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   ) {
     if (state is JuegoFinalizadoPorPuntos) return;
 
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
     _servicioSocket.finalizarPartida();
     emit(
       JuegoCanceladoDesconexion(
@@ -394,6 +605,13 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         jugadores: state.jugadores,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
+        anfitrion: state.anfitrion,
+        numeroRonda: state.numeroRonda,
+        rondaActiva: state.rondaActiva,
+        accionTurnoCompletada: state.accionTurnoCompletada,
+        esperandoDados: state.esperandoDados,
+        segundosRestantesRonda: state.segundosRestantesRonda,
+        duracionRondaSegundos: state.duracionRondaSegundos,
       ),
     );
   }
@@ -426,6 +644,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     final bool esGanadorLocal =
         event.idSocketGanador != null && event.idSocketGanador == tuIdSocket;
 
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
     _servicioSocket.finalizarPartida();
     emit(
       JuegoFinalizadoPorPuntos(
@@ -440,6 +660,13 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         jugadores: event.jugadores.isEmpty ? state.jugadores : event.jugadores,
         puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
         tuIdSocket: tuIdSocket,
+        anfitrion: state.anfitrion,
+        numeroRonda: state.numeroRonda,
+        rondaActiva: state.rondaActiva,
+        accionTurnoCompletada: state.accionTurnoCompletada,
+        esperandoDados: state.esperandoDados,
+        segundosRestantesRonda: state.segundosRestantesRonda,
+        duracionRondaSegundos: state.duracionRondaSegundos,
         idSocketGanador: event.idSocketGanador,
         ganadorUsuario: event.ganadorUsuario,
         esGanadorLocal: esGanadorLocal,
@@ -461,12 +688,28 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         : '${event.usuario} se rindió. La partida continúa.';
 
     _temporizadorMensajeAyuda?.cancel();
-    emit(state.copyWith(jugadores: jugadores, mensajeAyuda: mensaje));
+    emit(
+      state.copyWith(
+        jugadores: jugadores,
+        anfitrion: event.anfitrion ?? state.anfitrion,
+        mensajeAyuda: mensaje,
+      ),
+    );
     _temporizadorMensajeAyuda = Timer(_duracionMensajeAyuda, () {
       if (!isClosed) {
         add(EventoLimpiarMensajeAyuda());
       }
     });
+  }
+
+  void _emitirAccionTurno() {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.completarAccionTurno(_codigoSala);
+    } catch (_) {
+      return;
+    }
   }
 
   void _emitirPuntuacion(int puntuacion) {
@@ -523,8 +766,12 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   Future<void> close() async {
     _temporizadorMensajeAyuda?.cancel();
     _temporizadorMensajeAyuda = null;
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
     await _suscripcionRivalConcedio.cancel();
     await _suscripcionRivalDesconectado.cancel();
+    await _suscripcionDadosLanzados.cancel();
+    await _suscripcionRondaLista.cancel();
     await _suscripcionPuntuacionesActualizadas.cancel();
     await _suscripcionPartidaGanada.cancel();
     await _suscripcionJugadorConcedio.cancel();

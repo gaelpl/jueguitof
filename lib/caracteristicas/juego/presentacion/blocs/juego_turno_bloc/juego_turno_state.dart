@@ -13,6 +13,13 @@ class JuegoTurnoEstado {
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
   final String? tuIdSocket;
+  final String? anfitrion;
+  final int numeroRonda;
+  final bool rondaActiva;
+  final bool accionTurnoCompletada;
+  final bool esperandoDados;
+  final int segundosRestantesRonda;
+  final int duracionRondaSegundos;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -26,7 +33,28 @@ class JuegoTurnoEstado {
     this.jugadores = const [],
     this.puntosParaGanar,
     this.tuIdSocket,
+    this.anfitrion,
+    this.numeroRonda = 0,
+    this.rondaActiva = false,
+    this.accionTurnoCompletada = false,
+    this.esperandoDados = false,
+    this.segundosRestantesRonda = 0,
+    this.duracionRondaSegundos = 300,
   });
+
+  bool get esMultijugador => anfitrion != null;
+
+  bool get esAnfitrion =>
+      esMultijugador && tuIdSocket != null && tuIdSocket == anfitrion;
+
+  bool get puedeLanzarDados =>
+      !esMultijugador || (esAnfitrion && !rondaActiva && !esperandoDados);
+
+  bool get puedeActuar =>
+      !esMultijugador || (rondaActiva && !accionTurnoCompletada);
+
+  bool get puedeSaltarTurno =>
+      esMultijugador && rondaActiva && !accionTurnoCompletada;
 
   /// Dado elegido para buscar la casilla Ancla en el tablero.
   Dado? get dadoAncla {
@@ -54,6 +82,13 @@ class JuegoTurnoEstado {
     List<JugadorPartida>? jugadores,
     int? puntosParaGanar,
     String? tuIdSocket,
+    String? anfitrion,
+    int? numeroRonda,
+    bool? rondaActiva,
+    bool? accionTurnoCompletada,
+    bool? esperandoDados,
+    int? segundosRestantesRonda,
+    int? duracionRondaSegundos,
     bool limpiarAncla = false,
     bool limpiarDados = false,
     bool limpiarMensajeAyuda = false,
@@ -78,6 +113,16 @@ class JuegoTurnoEstado {
       jugadores: jugadores ?? this.jugadores,
       puntosParaGanar: puntosParaGanar ?? this.puntosParaGanar,
       tuIdSocket: tuIdSocket ?? this.tuIdSocket,
+      anfitrion: anfitrion ?? this.anfitrion,
+      numeroRonda: numeroRonda ?? this.numeroRonda,
+      rondaActiva: rondaActiva ?? this.rondaActiva,
+      accionTurnoCompletada:
+          accionTurnoCompletada ?? this.accionTurnoCompletada,
+      esperandoDados: esperandoDados ?? this.esperandoDados,
+      segundosRestantesRonda:
+          segundosRestantesRonda ?? this.segundosRestantesRonda,
+      duracionRondaSegundos:
+          duracionRondaSegundos ?? this.duracionRondaSegundos,
     );
   }
 }
@@ -95,6 +140,13 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.jugadores,
     super.puntosParaGanar,
     super.tuIdSocket,
+    super.anfitrion,
+    super.numeroRonda,
+    super.rondaActiva,
+    super.accionTurnoCompletada,
+    super.esperandoDados,
+    super.segundosRestantesRonda,
+    super.duracionRondaSegundos,
   });
 }
 
@@ -111,6 +163,13 @@ class JuegoRendicionLocal extends JuegoTurnoEstado {
     super.jugadores,
     super.puntosParaGanar,
     super.tuIdSocket,
+    super.anfitrion,
+    super.numeroRonda,
+    super.rondaActiva,
+    super.accionTurnoCompletada,
+    super.esperandoDados,
+    super.segundosRestantesRonda,
+    super.duracionRondaSegundos,
   });
 }
 
@@ -127,6 +186,13 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.jugadores,
     super.puntosParaGanar,
     super.tuIdSocket,
+    super.anfitrion,
+    super.numeroRonda,
+    super.rondaActiva,
+    super.accionTurnoCompletada,
+    super.esperandoDados,
+    super.segundosRestantesRonda,
+    super.duracionRondaSegundos,
   });
 }
 
@@ -147,6 +213,13 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.jugadores,
     super.puntosParaGanar,
     super.tuIdSocket,
+    super.anfitrion,
+    super.numeroRonda,
+    super.rondaActiva,
+    super.accionTurnoCompletada,
+    super.esperandoDados,
+    super.segundosRestantesRonda,
+    super.duracionRondaSegundos,
     required this.idSocketGanador,
     required this.ganadorUsuario,
     required this.esGanadorLocal,

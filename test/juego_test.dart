@@ -6,6 +6,7 @@ import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_turno_bloc/juego_turno_bloc.dart';
+import 'package:jueguitof/nucleo/tema/colores_region.dart';
 
 void main() {
   group('Regla Rojo / Amarillo (todos diferentes)', () {
@@ -411,6 +412,100 @@ void main() {
 
       expect(progresos, hasLength(1));
       expect(progresos.single.region, Region.azulNorte);
+    });
+  });
+
+  group('Nombres base de la leyenda', () {
+    test('usa solo el color base para todas las regiones', () {
+      expect(nombreDeRegion(Region.rojoNoroeste), 'Rojo');
+      expect(nombreDeRegion(Region.rojoSureste), 'Rojo');
+      expect(nombreDeRegion(Region.azulNorte), 'Azul');
+      expect(nombreDeRegion(Region.azulSureste), 'Azul');
+      expect(nombreDeRegion(Region.verdeNoroeste), 'Verde');
+      expect(nombreDeRegion(Region.verdeEste), 'Verde');
+      expect(nombreDeRegion(Region.lilaNorte), 'Morado');
+      expect(nombreDeRegion(Region.lilaSuroeste), 'Morado');
+      expect(nombreDeRegion(Region.amarillo), 'Amarillo');
+      expect(nombreDeRegion(Region.naranjaNorte), 'Naranja');
+      expect(nombreDeRegion(Region.blanco), 'Blanco');
+    });
+  });
+
+  group('Rondas multijugador de JuegoTurnoBloc', () {
+    test('sincroniza dados, acción y ronda lista', () async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3)],
+        zonas: [Zona(region: Region.amarillo, tipo: TipoAmarillo())],
+      );
+      final bloc = JuegoTurnoBloc(
+        tablero,
+        tuIdSocket: 'socket-ana',
+        anfitrion: 'socket-ana',
+      );
+
+      expect(bloc.state.puedeLanzarDados, isTrue);
+
+      bloc.add(
+        EventoDadosLanzados(
+          dado1: const Dado(3),
+          dado2: const Dado(5),
+          anfitrion: 'socket-ana',
+          numeroRonda: 1,
+          segundosRestantes: 300,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(bloc.state.rondaActiva, isTrue);
+      expect(bloc.state.puedeLanzarDados, isFalse);
+      expect(bloc.state.puedeSaltarTurno, isTrue);
+      expect(bloc.state.dado1?.valor, 3);
+      expect(bloc.state.dado2?.valor, 5);
+      expect(bloc.state.segundosRestantesRonda, 300);
+
+      bloc.add(EventoSaltarTurno());
+      await pumpEventQueue();
+
+      expect(bloc.state.accionTurnoCompletada, isTrue);
+      expect(bloc.state.puedeSaltarTurno, isFalse);
+
+      bloc.add(
+        EventoRondaLista(
+          anfitrion: 'socket-ana',
+          numeroRonda: 1,
+          motivo: 'completada',
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(bloc.state.rondaActiva, isFalse);
+      expect(bloc.state.accionTurnoCompletada, isFalse);
+      expect(bloc.state.dado1, isNull);
+      expect(bloc.state.dado2, isNull);
+      expect(bloc.state.puedeLanzarDados, isTrue);
+
+      await bloc.close();
+    });
+
+    test('un jugador que no es anfitrión no puede lanzar dados', () async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3)],
+        zonas: [Zona(region: Region.amarillo, tipo: TipoAmarillo())],
+      );
+      final bloc = JuegoTurnoBloc(
+        tablero,
+        tuIdSocket: 'socket-luis',
+        anfitrion: 'socket-ana',
+      );
+
+      expect(bloc.state.esAnfitrion, isFalse);
+      expect(bloc.state.puedeLanzarDados, isFalse);
+
+      await bloc.close();
     });
   });
 

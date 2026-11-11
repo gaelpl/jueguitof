@@ -68,11 +68,25 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
         jugadores: widget.jugadores,
         puntosParaGanar: widget.puntosParaGanar,
         tuIdSocket: widget.tuIdSocket,
+        anfitrion: widget.anfitrion,
       ),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Brilliant - Partida'),
           centerTitle: true,
+          actions: [
+            Builder(
+              builder: (context) => TextButton.icon(
+                key: const Key('boton-rendirse'),
+                onPressed: _conexionInestable
+                    ? null
+                    : () => _confirmarRendicion(context),
+                icon: const Icon(Icons.flag),
+                label: const Text('Rendirse'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+              ),
+            ),
+          ],
         ),
         body: BlocConsumer<JuegoTurnoBloc, JuegoTurnoEstado>(
           listener: (context, state) {
@@ -137,7 +151,9 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                         width: ladoTablero,
                         height: ladoTablero,
                         child: AbsorbPointer(
-                          absorbing: _conexionInestable,
+                          absorbing:
+                              _conexionInestable ||
+                              (state.esMultijugador && !state.puedeActuar),
                           child: GridView.builder(
                             physics: const NeverScrollableScrollPhysics(),
                             gridDelegate:
@@ -262,18 +278,30 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                         context: context,
                                         valorDado: state.dado1!.valor,
                                         esAncla: state.indiceDadoAncla == 0,
-                                        onTap: () => context
-                                            .read<JuegoTurnoBloc>()
-                                            .add(EventoSeleccionarDadoAncla(0)),
+                                        onTap: state.puedeActuar
+                                            ? () => context
+                                                  .read<JuegoTurnoBloc>()
+                                                  .add(
+                                                    EventoSeleccionarDadoAncla(
+                                                      0,
+                                                    ),
+                                                  )
+                                            : null,
                                       ),
                                       const SizedBox(width: 16),
                                       _buildChipDado(
                                         context: context,
                                         valorDado: state.dado2!.valor,
                                         esAncla: state.indiceDadoAncla == 1,
-                                        onTap: () => context
-                                            .read<JuegoTurnoBloc>()
-                                            .add(EventoSeleccionarDadoAncla(1)),
+                                        onTap: state.puedeActuar
+                                            ? () => context
+                                                  .read<JuegoTurnoBloc>()
+                                                  .add(
+                                                    EventoSeleccionarDadoAncla(
+                                                      1,
+                                                    ),
+                                                  )
+                                            : null,
                                       ),
                                     ],
                                   ),
@@ -292,49 +320,101 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                   ],
                                   const SizedBox(height: 10),
                                 ],
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
+                                if (state.esMultijugador) ...[
+                                  _construirInfoRonda(state),
+                                  const SizedBox(height: 10),
+                                  if (state.esAnfitrion)
+                                    ElevatedButton.icon(
+                                      key: const Key('boton-lanzar-dados'),
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      onPressed:
+                                          _conexionInestable ||
+                                              !state.puedeLanzarDados
+                                          ? null
+                                          : () {
+                                              context
+                                                  .read<JuegoTurnoBloc>()
+                                                  .add(EventoLanzarDados());
+                                            },
+                                      icon: const Icon(Icons.casino),
+                                      label: Text(
+                                        state.esperandoDados
+                                            ? 'Lanzando dados...'
+                                            : state.rondaActiva
+                                            ? 'Ronda en curso'
+                                            : 'Lanzar 2 Dados',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    )
+                                  else if (!state.rondaActiva)
+                                    const Text(
+                                      'Esperando lanzamiento del anfitrión...',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      'Ronda ${state.numeroRonda} en curso',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  if (state.puedeSaltarTurno) ...[
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      key: const Key('boton-saltar-turno'),
+                                      onPressed: _conexionInestable
+                                          ? null
+                                          : () {
+                                              context
+                                                  .read<JuegoTurnoBloc>()
+                                                  .add(EventoSaltarTurno());
+                                            },
+                                      icon: const Icon(Icons.skip_next),
+                                      label: const Text('Saltar Turno'),
+                                    ),
+                                  ],
+                                  if (state.accionTurnoCompletada) ...[
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Acción completada. Esperando a los demás...',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ] else
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    onPressed: _conexionInestable
+                                        ? null
+                                        : () {
+                                            context.read<JuegoTurnoBloc>().add(
+                                              EventoLanzarDados(),
+                                            );
+                                          },
+                                    icon: const Icon(Icons.casino),
+                                    label: const Text(
+                                      'Lanzar 2 Dados',
+                                      style: TextStyle(fontSize: 16),
                                     ),
                                   ),
-                                  onPressed: _conexionInestable
-                                      ? null
-                                      : () {
-                                          context.read<JuegoTurnoBloc>().add(
-                                            EventoLanzarDados(),
-                                          );
-                                        },
-                                  icon: const Icon(Icons.casino),
-                                  label: const Text(
-                                    'Lanzar 2 Dados',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red.shade700,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  onPressed: _conexionInestable
-                                      ? null
-                                      : () {
-                                          context.read<JuegoTurnoBloc>().add(
-                                            EventoRendirse(),
-                                          );
-                                        },
-                                  icon: const Icon(Icons.flag),
-                                  label: const Text(
-                                    'Rendirse',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -348,6 +428,44 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _construirInfoRonda(JuegoTurnoEstado state) {
+    if (!state.rondaActiva) {
+      return Text(
+        state.numeroRonda == 0
+            ? 'Esperando el inicio de la primera ronda.'
+            : 'Ronda ${state.numeroRonda} completada.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      );
+    }
+
+    final int minutos = state.segundosRestantesRonda ~/ 60;
+    final int segundos = state.segundosRestantesRonda % 60;
+    final String tiempo =
+        '${minutos.toString().padLeft(2, '0')}:'
+        '${segundos.toString().padLeft(2, '0')}';
+
+    return Column(
+      children: [
+        Text(
+          'Ronda ${state.numeroRonda}',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Tiempo restante: $tiempo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: state.segundosRestantesRonda <= 30
+                ? Colors.red.shade700
+                : Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 
@@ -683,6 +801,32 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
     );
   }
 
+  Future<void> _confirmarRendicion(BuildContext context) async {
+    final bool? confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar rendición'),
+        content: const Text(
+          '¿Estás seguro de que deseas rendirte? Perderás la partida actual.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Confirmar Rendición'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true || !context.mounted) return;
+
+    context.read<JuegoTurnoBloc>().add(EventoRendirse());
+  }
+
   void _mostrarDialogoRendicion(BuildContext context) {
     _temporizadorSalidaRendicion?.cancel();
     bool navegando = false;
@@ -779,7 +923,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
     required BuildContext context,
     required int valorDado,
     required bool esAncla,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return ChoiceChip(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -793,7 +937,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
       ),
       selected: esAncla,
       selectedColor: Theme.of(context).colorScheme.primary,
-      onSelected: _conexionInestable ? null : (_) => onTap(),
+      onSelected: _conexionInestable || onTap == null ? null : (_) => onTap(),
     );
   }
 }

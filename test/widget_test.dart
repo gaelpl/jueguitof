@@ -240,13 +240,13 @@ void main() {
       final Text azul = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const Key('leyenda-region-azulNorte')),
-          matching: find.text('Azul N'),
+          matching: find.text('Azul'),
         ),
       );
       final Text verde = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const Key('leyenda-region-verdeNoroeste')),
-          matching: find.text('Verde NO'),
+          matching: find.text('Verde'),
         ),
       );
 
@@ -270,7 +270,27 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Rendirse'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirmar rendición'), findsOneWidget);
+      expect(
+        find.text(
+          '¿Estás seguro de que deseas rendirte? Perderás la partida actual.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Cancelar'), findsOneWidget);
+      expect(find.text('Confirmar Rendición'), findsOneWidget);
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Te has rendido'), findsNothing);
+
+      await tester.tap(find.text('Rendirse'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirmar Rendición'));
+      await tester.pumpAndSettle();
 
       expect(find.text('Te has rendido'), findsOneWidget);
 
@@ -278,6 +298,52 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Selecciona un mapa'), findsOneWidget);
+    });
+
+    testWidgets('muestra controles de ronda solo para el anfitrión', (
+      WidgetTester tester,
+    ) async {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [Celda(columna: 0, fila: 0, region: Region.amarillo, valor: 3)],
+        zonas: [Zona(region: Region.amarillo, tipo: TipoAmarillo())],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaJuegoTurno(
+            key: const ValueKey('host'),
+            tablero: tablero,
+            codigoSala: 'ABC123',
+            tuIdSocket: 'socket-ana',
+            anfitrion: 'socket-ana',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('boton-lanzar-dados')), findsOneWidget);
+      expect(find.byKey(const Key('boton-saltar-turno')), findsNothing);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaJuegoTurno(
+            key: const ValueKey('guest'),
+            tablero: tablero,
+            codigoSala: 'ABC123',
+            tuIdSocket: 'socket-luis',
+            anfitrion: 'socket-ana',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('boton-lanzar-dados')), findsNothing);
+      expect(
+        find.text('Esperando lanzamiento del anfitrión...'),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -32,34 +32,26 @@ Color colorDeRegion(Region region) {
 String nombreDeRegion(Region region) {
   switch (region) {
     case Region.rojoNoroeste:
-      return 'Rojo NO';
     case Region.rojoSureste:
-      return 'Rojo SE';
     case Region.rojoNoreste:
-      return 'Rojo NE';
     case Region.rojoSuroeste:
-      return 'Rojo SO';
+      return 'Rojo';
     case Region.amarillo:
       return 'Amarillo';
     case Region.verdeNoroeste:
-      return 'Verde NO';
     case Region.verdeEste:
-      return 'Verde E';
+      return 'Verde';
     case Region.azulNorte:
-      return 'Azul N';
     case Region.azulSureste:
-      return 'Azul SE';
+      return 'Azul';
     case Region.lilaNorte:
-      return 'Lila N';
     case Region.lilaSuroeste:
-      return 'Lila SO';
     case Region.lilaSureste:
-      return 'Lila SE';
+      return 'Morado';
     case Region.blanco:
       return 'Blanco';
     case Region.naranjaNorte:
-      return 'Naranja N';
     case Region.naranjaSur:
-      return 'Naranja S';
+      return 'Naranja';
   }
 }

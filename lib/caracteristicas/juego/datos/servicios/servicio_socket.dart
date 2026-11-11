@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
@@ -17,6 +17,10 @@ class ServicioSocket {
   final StreamController<String> _controladorSalaCreada =
       StreamController<String>.broadcast();
   final StreamController<Map<String, dynamic>> _controladorPartidaLista =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorDadosLanzados =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorRondaLista =
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<String> _controladorErrorSala =
       StreamController<String>.broadcast();
@@ -46,6 +50,9 @@ class ServicioSocket {
   Stream<String> get salaCreada => _controladorSalaCreada.stream;
   Stream<Map<String, dynamic>> get partidaLista =>
       _controladorPartidaLista.stream;
+  Stream<Map<String, dynamic>> get dadosLanzados =>
+      _controladorDadosLanzados.stream;
+  Stream<Map<String, dynamic>> get rondaLista => _controladorRondaLista.stream;
   Stream<String> get errorSala => _controladorErrorSala.stream;
   Stream<String> get errorConexion => _controladorErrorConexion.stream;
   Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
@@ -150,6 +157,18 @@ class ServicioSocket {
       }
     });
 
+    socket.on('dados_lanzados', (datos) {
+      if (datos is Map) {
+        _controladorDadosLanzados.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('ronda_lista', (datos) {
+      if (datos is Map) {
+        _controladorRondaLista.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
     socket.on('sala_actualizada', (datos) {
       if (datos is Map) {
         _controladorSalaActualizada.add(Map<String, dynamic>.from(datos));
@@ -222,6 +241,26 @@ class ServicioSocket {
       throw StateError('El socket no está inicializado.');
     }
     socket.emit('iniciar_partida', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+    });
+  }
+
+  void lanzarDados(String codigoSala) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('lanzar_dados', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+    });
+  }
+
+  void completarAccionTurno(String codigoSala) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('accion_turno_completada', {
       'codigoSala': codigoSala.trim().toUpperCase(),
     });
   }
