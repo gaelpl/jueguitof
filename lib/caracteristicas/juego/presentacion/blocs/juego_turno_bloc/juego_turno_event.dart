@@ -86,10 +86,12 @@ class EventoRivalDesconectado extends JuegoTurnoEvento {}
 class EventoPuntuacionesActualizadas extends JuegoTurnoEvento {
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
+  final List<RegistroRegion> historialRegiones;
 
   EventoPuntuacionesActualizadas({
     required this.jugadores,
     this.puntosParaGanar,
+    this.historialRegiones = const [],
   });
 }
 
@@ -98,12 +100,14 @@ class EventoPartidaGanada extends JuegoTurnoEvento {
   final String? ganadorUsuario;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
+  final List<RegistroRegion> historialRegiones;
 
   EventoPartidaGanada({
     this.idSocketGanador,
     this.ganadorUsuario,
     this.jugadores = const [],
     this.puntosParaGanar,
+    this.historialRegiones = const [],
   });
 }
 

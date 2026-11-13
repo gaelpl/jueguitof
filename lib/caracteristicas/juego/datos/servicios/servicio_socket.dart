@@ -5,6 +5,17 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../../../../nucleo/configuracion/entorno.dart';
 
+class SesionNoActivaException implements Exception {
+  final String mensaje;
+
+  const SesionNoActivaException([
+    this.mensaje = 'No hay una sesión activa. Inicia sesión nuevamente.',
+  ]);
+
+  @override
+  String toString() => mensaje;
+}
+
 class ServicioSocket {
   static const String _urlBase = Entorno.apiUrl;
   static const String _claveToken = 'token_jwt';
@@ -28,6 +39,8 @@ class ServicioSocket {
       StreamController<String>.broadcast();
   final StreamController<String> _controladorErrorConexion =
       StreamController<String>.broadcast();
+  final StreamController<bool> _controladorSesionInvalida =
+      StreamController<bool>.broadcast();
   final StreamController<bool> _controladorRivalConcedio =
       StreamController<bool>.broadcast();
   final StreamController<bool> _controladorRivalDesconectado =
@@ -59,6 +72,7 @@ class ServicioSocket {
   Stream<Map<String, dynamic>> get rondaLista => _controladorRondaLista.stream;
   Stream<String> get errorSala => _controladorErrorSala.stream;
   Stream<String> get errorConexion => _controladorErrorConexion.stream;
+  Stream<bool> get sesionInvalida => _controladorSesionInvalida.stream;
   Stream<bool> get rivalConcedio => _controladorRivalConcedio.stream;
   Stream<bool> get rivalDesconectado => _controladorRivalDesconectado.stream;
   Stream<bool> get conexionInestable => _controladorConexionInestable.stream;
@@ -99,7 +113,7 @@ class ServicioSocket {
     final String? token = preferencias.getString(_claveToken);
 
     if (token == null || token.isEmpty) {
-      throw Exception('No hay una sesión activa. Inicia sesión nuevamente.');
+      throw const SesionNoActivaException();
     }
 
     if (_socket != null && _tokenActual == token) {
@@ -128,7 +142,14 @@ class ServicioSocket {
       }
     });
 
-    socket.onConnectError((_) {
+    socket.onConnectError((error) {
+      if (_esErrorDeSesion(error)) {
+        _actualizarConexionInestable(false);
+        _controladorSesionInvalida.add(true);
+        socket.disconnect();
+        return;
+      }
+
       _controladorErrorConexion.add(
         'No se pudo conectar con el servidor de partidas.',
       );
@@ -137,7 +158,13 @@ class ServicioSocket {
       }
     });
 
-    socket.onError((_) {
+    socket.onError((error) {
+      if (_esErrorDeSesion(error)) {
+        _actualizarConexionInestable(false);
+        _controladorSesionInvalida.add(true);
+        return;
+      }
+
       _controladorErrorConexion.add(
         'Ocurrió un error en la conexión con el servidor.',
       );
@@ -231,12 +258,12 @@ class ServicioSocket {
     socket.connect();
   }
 
-  void crearSala() {
+  void crearSala({int numeroMapa = 1}) {
     final socket_io.Socket? socket = _socket;
     if (socket == null) {
       throw StateError('El socket no está inicializado.');
     }
-    socket.emit('crear_sala');
+    socket.emit('crear_sala', {'numeroMapa': numeroMapa});
   }
 
   void unirseSala(String codigo) {
@@ -277,14 +304,14 @@ class ServicioSocket {
     });
   }
 
-  void actualizarPuntuacion(String codigoSala, int puntuacion) {
+  void reclamarRegion(String codigoSala, String region) {
     final socket_io.Socket? socket = _socket;
     if (socket == null) {
       throw StateError('El socket no está inicializado.');
     }
-    socket.emit('puntuacion_actualizada', {
+    socket.emit('reclamar_region', {
       'codigoSala': codigoSala.trim().toUpperCase(),
-      'puntuacion': puntuacion,
+      'region': region,
     });
   }
 
@@ -322,6 +349,15 @@ class ServicioSocket {
     _socket?.dispose();
     _socket = null;
     _tokenActual = null;
+  }
+
+  bool _esErrorDeSesion(dynamic error) {
+    final String mensaje = error?.toString().toLowerCase() ?? '';
+    return mensaje.contains('token') ||
+        mensaje.contains('acceso denegado') ||
+        mensaje.contains('autenticaci') ||
+        mensaje.contains('sesión') ||
+        mensaje.contains('sesion');
   }
 
   String _obtenerMensaje(dynamic datos, String mensajePorDefecto) {

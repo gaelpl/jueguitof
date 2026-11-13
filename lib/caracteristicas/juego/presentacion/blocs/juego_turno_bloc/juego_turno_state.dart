@@ -11,6 +11,7 @@ class JuegoTurnoEstado {
   final int puntuacionTotal;
   final String? mensajeAyuda;
   final List<JugadorPartida> jugadores;
+  final List<RegistroRegion> historialRegiones;
   final int? puntosParaGanar;
   final String? tuIdSocket;
   final String? anfitrion;
@@ -34,6 +35,7 @@ class JuegoTurnoEstado {
     this.puntuacionTotal = 0,
     this.mensajeAyuda,
     this.jugadores = const [],
+    this.historialRegiones = const [],
     this.puntosParaGanar,
     this.tuIdSocket,
     this.anfitrion,
@@ -90,6 +92,7 @@ class JuegoTurnoEstado {
     int? puntuacionTotal,
     String? mensajeAyuda,
     List<JugadorPartida>? jugadores,
+    List<RegistroRegion>? historialRegiones,
     int? puntosParaGanar,
     String? tuIdSocket,
     String? anfitrion,
@@ -124,6 +127,7 @@ class JuegoTurnoEstado {
           ? null
           : (mensajeAyuda ?? this.mensajeAyuda),
       jugadores: jugadores ?? this.jugadores,
+      historialRegiones: historialRegiones ?? this.historialRegiones,
       puntosParaGanar: puntosParaGanar ?? this.puntosParaGanar,
       tuIdSocket: tuIdSocket ?? this.tuIdSocket,
       anfitrion: anfitrion ?? this.anfitrion,
@@ -154,6 +158,7 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.puntuacionTotal,
     super.mensajeAyuda,
     super.jugadores,
+    super.historialRegiones,
     super.puntosParaGanar,
     super.tuIdSocket,
     super.anfitrion,
@@ -177,6 +182,7 @@ class JuegoRendicionLocal extends JuegoTurnoEstado {
     super.puntuacionTotal,
     super.mensajeAyuda,
     super.jugadores,
+    super.historialRegiones,
     super.puntosParaGanar,
     super.tuIdSocket,
     super.anfitrion,
@@ -200,6 +206,7 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.puntuacionTotal,
     super.mensajeAyuda,
     super.jugadores,
+    super.historialRegiones,
     super.puntosParaGanar,
     super.tuIdSocket,
     super.anfitrion,
@@ -227,6 +234,7 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.puntuacionTotal,
     super.mensajeAyuda,
     super.jugadores,
+    super.historialRegiones,
     super.puntosParaGanar,
     super.tuIdSocket,
     super.anfitrion,

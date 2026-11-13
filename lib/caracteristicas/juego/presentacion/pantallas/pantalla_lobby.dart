@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
+import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/mapas_oficiales.dart';
 import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
@@ -40,6 +42,22 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
   final TextEditingController _codigoControlador = TextEditingController();
 
   bool _navegacionRealizada = false;
+  bool _redirigiendoSesion = false;
+
+  Future<void> _manejarSesionExpirada() async {
+    if (_redirigiendoSesion) return;
+    _redirigiendoSesion = true;
+
+    await ServicioSocket.instancia.desconectar();
+    await ServicioAutenticacion().cerrarSesion();
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const PantallaLogin()),
+      (route) => false,
+    );
+  }
 
   @override
   void dispose() {
@@ -64,8 +82,8 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => PantallaSeleccionInicial(
-          tablero: CreadorMapas.obtenerMapa(1),
-          numeroMapa: 1,
+          tablero: CreadorMapas.obtenerMapa(estado.numeroMapa),
+          numeroMapa: estado.numeroMapa,
           codigoSala: estado.codigo,
           jugadores: estado.jugadores,
           puntosParaGanar: estado.puntosParaGanar,
@@ -80,6 +98,37 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     if (!_formularioKey.currentState!.validate()) return;
     final String codigo = _codigoControlador.text.trim().toUpperCase();
     context.read<LobbyBloc>().add(UnirseSalaSolicitada(codigo));
+  }
+
+  Future<void> _solicitarCrearSala() async {
+    final int? numeroMapa = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Elige el mapa'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: List<Widget>.generate(4, (indice) {
+              final int numero = indice + 1;
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _azulProfundo,
+                  child: Text(
+                    '$numero',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                title: Text('Mapa $numero'),
+                onTap: () => Navigator.of(dialogContext).pop(numero),
+              );
+            }),
+          ),
+        );
+      },
+    );
+
+    if (numeroMapa == null || !mounted) return;
+    context.read<LobbyBloc>().add(CrearSalaSolicitada(numeroMapa: numeroMapa));
   }
 
   @override
@@ -160,6 +209,10 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: BlocConsumer<LobbyBloc, LobbyEstado>(
                       listener: (context, estado) {
+                        if (estado is SesionExpiradaLobby) {
+                          _manejarSesionExpirada();
+                        }
+
                         if (estado is ErrorLobby) {
                           _mostrarMensaje(estado.mensaje, esError: true);
                         }
@@ -535,9 +588,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
           cargando: creandoSala,
           texto: 'Crear Partida',
           icono: Icons.add_circle_outline_rounded,
-          onPressed: () {
-            context.read<LobbyBloc>().add(const CrearSalaSolicitada());
-          },
+          onPressed: _solicitarCrearSala,
         ),
         const SizedBox(height: 24),
         Row(

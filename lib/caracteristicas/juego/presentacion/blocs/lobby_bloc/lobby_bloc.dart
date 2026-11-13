@@ -19,6 +19,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
   late final StreamSubscription<Map<String, dynamic>> _suscripcionPartidaLista;
   late final StreamSubscription<String> _suscripcionErrorSala;
   late final StreamSubscription<String> _suscripcionErrorConexion;
+  late final StreamSubscription<bool> _suscripcionSesionInvalida;
 
   LobbyBloc({ServicioSocket? servicioSocket})
     : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
@@ -51,6 +52,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
             anfitrion: evento.anfitrion,
             tuIdSocket: tuIdSocket,
             puntosParaGanar: evento.puntosParaGanar,
+            numeroMapa: evento.numeroMapa,
           ),
         );
         return;
@@ -63,6 +65,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           anfitrion: evento.anfitrion,
           tuIdSocket: tuIdSocket,
           puntosParaGanar: evento.puntosParaGanar,
+          numeroMapa: evento.numeroMapa,
         ),
       );
     });
@@ -74,6 +77,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           puntosParaGanar: evento.puntosParaGanar,
           anfitrion: evento.anfitrion,
           tuIdSocket: evento.tuIdSocket,
+          numeroMapa: evento.numeroMapa,
         ),
       ),
     );
@@ -82,6 +86,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     );
     on<ErrorConexionRecibido>(
       (evento, emitir) => emitir(ErrorLobby(mensaje: evento.mensaje)),
+    );
+    on<SesionInvalidaRecibida>(
+      (evento, emitir) => emitir(const SesionExpiradaLobby()),
     );
 
     _suscripcionSalaCreada = _servicioSocket.salaCreada.listen(
@@ -97,6 +104,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           jugadores: _parsearJugadores(datos['jugadores']),
           anfitrion: datos['anfitrion']?.toString(),
           iniciada: datos['iniciada'] == true,
+          numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
         ),
       );
@@ -107,6 +115,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           codigo: datos['codigo']?.toString() ?? '',
           jugadores: _parsearJugadores(datos['jugadores']),
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']) ?? 0,
+          numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           anfitrion: datos['anfitrion']?.toString(),
           tuIdSocket: datos['tuSocketId']?.toString(),
         ),
@@ -118,6 +127,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     _suscripcionErrorConexion = _servicioSocket.errorConexion.listen(
       (mensaje) => add(ErrorConexionRecibido(mensaje)),
     );
+    _suscripcionSesionInvalida = _servicioSocket.sesionInvalida.listen(
+      (_) => add(const SesionInvalidaRecibida()),
+    );
   }
 
   Future<void> _alSolicitarCrearSala(
@@ -128,7 +140,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
 
     try {
       await _servicioSocket.conectar();
-      _servicioSocket.crearSala();
+      _servicioSocket.crearSala(numeroMapa: evento.numeroMapa);
+    } on SesionNoActivaException {
+      emitir(const SesionExpiradaLobby());
     } catch (error) {
       emitir(ErrorLobby(mensaje: _limpiarMensajeError(error)));
     }
@@ -150,6 +164,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     try {
       await _servicioSocket.conectar();
       _servicioSocket.unirseSala(codigo);
+    } on SesionNoActivaException {
+      emitir(const SesionExpiradaLobby());
     } catch (error) {
       emitir(ErrorLobby(mensaje: _limpiarMensajeError(error)));
     }
@@ -188,6 +204,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         anfitrion: estadoActual.anfitrion,
         tuIdSocket: estadoActual.tuIdSocket,
         puntosParaGanar: estadoActual.puntosParaGanar,
+        numeroMapa: estadoActual.numeroMapa,
       ),
     );
 
@@ -196,6 +213,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         await _servicioSocket.conectar();
       }
       _servicioSocket.solicitarInicioPartida(estadoActual.codigo);
+    } on SesionNoActivaException {
+      emitir(const SesionExpiradaLobby());
     } catch (error) {
       emitir(ErrorLobby(mensaje: _limpiarMensajeError(error)));
     }
@@ -234,6 +253,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     await _suscripcionPartidaLista.cancel();
     await _suscripcionErrorSala.cancel();
     await _suscripcionErrorConexion.cancel();
+    await _suscripcionSesionInvalida.cancel();
     return super.close();
   }
 }

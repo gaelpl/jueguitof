@@ -146,7 +146,8 @@ class PantallaMenuMapas extends StatelessWidget {
                 ),
               );
 
-              if (resultado['exito'] == true) {
+              if (resultado['exito'] == true ||
+                  resultado['sesionExpirada'] == true) {
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(

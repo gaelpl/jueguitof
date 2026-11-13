@@ -217,7 +217,7 @@ void main() {
       expect(tester.getSize(tableroFinder), tamanoInicial);
     });
 
-    testWidgets('tacha la leyenda de una zona completada', (
+    testWidgets('resume el progreso de los bloques por tipo de región', (
       WidgetTester tester,
     ) async {
       final tablero = Tablero(
@@ -240,21 +240,27 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final Text azul = tester.widget<Text>(
+      expect(
         find.descendant(
-          of: find.byKey(const Key('leyenda-region-azulNorte')),
-          matching: find.text('Azul'),
+          of: find.byKey(const Key('leyenda-tipo-azul')),
+          matching: find.text('Bloques 1/1'),
         ),
+        findsOneWidget,
       );
-      final Text verde = tester.widget<Text>(
+      expect(
         find.descendant(
-          of: find.byKey(const Key('leyenda-region-verdeNoroeste')),
-          matching: find.text('Verde'),
+          of: find.byKey(const Key('leyenda-tipo-verde')),
+          matching: find.text('Bloques 0/1'),
         ),
+        findsOneWidget,
       );
-
-      expect(azul.style?.decoration, TextDecoration.lineThrough);
-      expect(verde.style?.decoration, isNot(TextDecoration.lineThrough));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('leyenda-tipo-azul')),
+          matching: find.text('='),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('muestra confirmación y vuelve al menú al rendirse', (

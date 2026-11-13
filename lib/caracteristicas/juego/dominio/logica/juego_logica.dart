@@ -13,6 +13,9 @@ int calcular() {
 abstract class Tipo {
   Color get color;
   String get descripcion;
+  String get nombre;
+  String get simbolo;
+  String get identificador;
   bool esPosibleAgregar(List<int> actuales, int posible);
   Map<int, int> get puntuaciones;
 }
@@ -20,6 +23,15 @@ abstract class Tipo {
 class TipoAzul extends Tipo {
   @override
   Color get color => const Color(0xFF2196F3);
+
+  @override
+  String get nombre => 'Azul';
+
+  @override
+  String get simbolo => '=';
+
+  @override
+  String get identificador => 'azul';
 
   @override
   String get descripcion => 'Todos los números deben de ser iguales';
@@ -37,6 +49,15 @@ class TipoAzul extends Tipo {
 class TipoMorado extends Tipo {
   @override
   Color get color => const Color(0xFF8E24AA);
+
+  @override
+  String get nombre => 'Morado';
+
+  @override
+  String get simbolo => '≤2';
+
+  @override
+  String get identificador => 'morado';
 
   @override
   String get descripcion =>
@@ -57,6 +78,15 @@ class TipoRojo extends Tipo {
   Color get color => const Color(0xFFE53935);
 
   @override
+  String get nombre => 'Rojo';
+
+  @override
+  String get simbolo => '≠';
+
+  @override
+  String get identificador => 'rojo';
+
+  @override
   String get descripcion => 'Todos los números deben de ser diferentes';
 
   @override
@@ -71,6 +101,15 @@ class TipoRojo extends Tipo {
 class TipoAmarillo extends Tipo {
   @override
   Color get color => const Color(0xFFFFEB3B);
+
+  @override
+  String get nombre => 'Amarillo';
+
+  @override
+  String get simbolo => '≠';
+
+  @override
+  String get identificador => 'amarillo';
 
   @override
   String get descripcion => 'Todos los números deben de ser diferentes';
@@ -89,6 +128,15 @@ class TipoVerde extends Tipo {
   Color get color => const Color(0xFF4CAF50);
 
   @override
+  String get nombre => 'Verde';
+
+  @override
+  String get simbolo => '∀';
+
+  @override
+  String get identificador => 'verde';
+
+  @override
   String get descripcion => 'Cualquier número es permitido';
 
   @override
@@ -103,6 +151,15 @@ class TipoVerde extends Tipo {
 class TipoBlanco extends Tipo {
   @override
   Color get color => const Color(0xFFECEFF1);
+
+  @override
+  String get nombre => 'Blanco';
+
+  @override
+  String get simbolo => '=';
+
+  @override
+  String get identificador => 'blanco';
 
   @override
   String get descripcion => 'Todos los números deben de ser iguales';
@@ -125,6 +182,16 @@ class TipoNaranja extends Tipo {
 
   @override
   Color get color => const Color(0xFFFF9800);
+
+  @override
+  String get nombre => 'Naranja';
+
+  @override
+  String get simbolo => esFilaSuperior ? '4-6' : '1-3';
+
+  @override
+  String get identificador =>
+      esFilaSuperior ? 'naranja-superior' : 'naranja-inferior';
 
   @override
   String get descripcion => esFilaSuperior
@@ -509,6 +576,112 @@ List<ProgresoZona> calcularProgresoZonas(Tablero tablero) {
 
   progresos.sort((a, b) => a.region.index.compareTo(b.region.index));
   return progresos;
+}
+
+bool estaRegionCompletada(Tablero tablero, Region region) {
+  final celdas = tablero.celdas.where((celda) => celda.region == region);
+  return celdas.isNotEmpty && celdas.every((celda) => celda.valor != null);
+}
+
+Region? regionDesdeNombre(String nombre) {
+  for (final region in Region.values) {
+    if (region.name == nombre) return region;
+  }
+  return null;
+}
+
+String nombreBloqueRegion(Region region) {
+  switch (region) {
+    case Region.rojoNoroeste:
+    case Region.verdeNoroeste:
+      return 'Noroeste';
+    case Region.rojoNoreste:
+      return 'Noreste';
+    case Region.rojoSuroeste:
+    case Region.lilaSuroeste:
+      return 'Suroeste';
+    case Region.rojoSureste:
+    case Region.lilaSureste:
+    case Region.azulSureste:
+      return 'Sureste';
+    case Region.verdeEste:
+      return 'Este';
+    case Region.lilaNorte:
+    case Region.azulNorte:
+    case Region.naranjaNorte:
+      return 'Norte';
+    case Region.naranjaSur:
+      return 'Sur';
+    case Region.amarillo:
+    case Region.blanco:
+      return '';
+  }
+}
+
+class RegistroRegion {
+  final Region region;
+  final String usuario;
+  final String? socketId;
+  final int puesto;
+  final int puntos;
+  final int numeroRonda;
+
+  const RegistroRegion({
+    required this.region,
+    required this.usuario,
+    this.socketId,
+    required this.puesto,
+    required this.puntos,
+    this.numeroRonda = 0,
+  });
+}
+
+class ResumenRegion {
+  final Tipo tipo;
+  final String nombre;
+  final int totalBloques;
+  final int bloquesCompletados;
+
+  const ResumenRegion({
+    required this.tipo,
+    required this.nombre,
+    required this.totalBloques,
+    required this.bloquesCompletados,
+  });
+
+  List<int> get puntosPorPuesto =>
+      [1, 2, 3].map((puesto) => tipo.puntuaciones[puesto] ?? 0).toList();
+
+  ResumenRegion agregarBloque({required bool completada}) {
+    return ResumenRegion(
+      tipo: tipo,
+      nombre: nombre,
+      totalBloques: totalBloques + 1,
+      bloquesCompletados: bloquesCompletados + (completada ? 1 : 0),
+    );
+  }
+}
+
+List<ResumenRegion> calcularResumenRegiones(Tablero tablero) {
+  final Map<String, ResumenRegion> resumen = {};
+
+  for (final progreso in calcularProgresoZonas(tablero)) {
+    final String clave = progreso.tipo.identificador;
+    final ResumenRegion? existente = resumen[clave];
+
+    if (existente == null) {
+      resumen[clave] = ResumenRegion(
+        tipo: progreso.tipo,
+        nombre: progreso.tipo.nombre,
+        totalBloques: 1,
+        bloquesCompletados: progreso.completada ? 1 : 0,
+      );
+    } else {
+      resumen[clave] = existente.agregarBloque(completada: progreso.completada);
+    }
+  }
+
+  return resumen.values.toList();
 }
 
 /// Calcula la puntuación total del tablero otorgando la puntuación de 1.er lugar al completar cada bloque al 100%.

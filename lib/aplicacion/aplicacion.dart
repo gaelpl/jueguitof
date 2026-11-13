@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../caracteristicas/autenticacion/datos/servicios/servicio_autenticacion.dart';
 import '../caracteristicas/autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../caracteristicas/juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 
 class BrilliantApp extends StatelessWidget {
   const BrilliantApp({super.key});
 
-  // Método para verificar si el token JWT existe localmente
+  // Verifica el token local y, si es posible, lo valida contra el servidor.
   Future<bool> _verificarSesionActiva() async {
     final SharedPreferences preferencias =
         await SharedPreferences.getInstance();
-    final String? token = preferencias.getString('token_jwt');
-    return token != null && token.isNotEmpty;
+    final String? token = preferencias.getString(
+      ServicioAutenticacion.claveToken,
+    );
+
+    if (token == null || token.isEmpty) return false;
+
+    final String estado = await ServicioAutenticacion().validarSesion();
+
+    // Si Render está despertando o no hay red, conservamos la sesión local
+    // para no expulsar al usuario; el socket la validará al conectarse.
+    return estado == 'activa' || estado == 'sinConexion';
   }
 
   @override
@@ -27,14 +37,12 @@ class BrilliantApp extends StatelessWidget {
       home: FutureBuilder<bool>(
         future: _verificarSesionActiva(),
         builder: (context, snapshot) {
-          // Mostramos un indicador de carga mientras lee SharedPreferences
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          // Verificamos el resultado de la lectura del token
           final bool sesionActiva = snapshot.data ?? false;
 
           if (sesionActiva) {

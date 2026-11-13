@@ -431,6 +431,49 @@ void main() {
     });
   });
 
+  group('Resumen de regiones por tipo', () {
+    test('agrupa bloques del mismo tipo y cuenta los completados', () {
+      final tablero = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.rojoNoroeste, valor: 1),
+          Celda(columna: 1, fila: 0, region: Region.rojoNoroeste, valor: 2),
+          Celda(columna: 0, fila: 1, region: Region.rojoSureste, valor: 3),
+          Celda(columna: 1, fila: 1, region: Region.rojoSureste),
+        ],
+        zonas: [
+          Zona(region: Region.rojoNoroeste, tipo: TipoRojo()),
+          Zona(region: Region.rojoSureste, tipo: TipoRojo()),
+        ],
+      );
+
+      final resumen = calcularResumenRegiones(tablero);
+      final rojo = resumen.singleWhere(
+        (region) => region.tipo.identificador == 'rojo',
+      );
+
+      expect(rojo.nombre, 'Rojo');
+      expect(rojo.totalBloques, 2);
+      expect(rojo.bloquesCompletados, 1);
+      expect(rojo.puntosPorPuesto, [6, 4, 2]);
+      expect(estaRegionCompletada(tablero, Region.rojoNoroeste), isTrue);
+      expect(estaRegionCompletada(tablero, Region.rojoSureste), isFalse);
+    });
+
+    test('nombra cada bloque y recupera la región desde el servidor', () {
+      expect(regionDesdeNombre('rojoNoreste'), Region.rojoNoreste);
+      expect(regionDesdeNombre('inexistente'), isNull);
+      expect(nombreBloqueRegion(Region.rojoNoroeste), 'Noroeste');
+      expect(nombreBloqueRegion(Region.rojoNoreste), 'Noreste');
+      expect(nombreBloqueRegion(Region.rojoSuroeste), 'Suroeste');
+      expect(nombreBloqueRegion(Region.rojoSureste), 'Sureste');
+      expect(nombreBloqueRegion(Region.naranjaNorte), 'Norte');
+      expect(nombreBloqueRegion(Region.naranjaSur), 'Sur');
+      expect(nombreBloqueRegion(Region.amarillo), '');
+    });
+  });
+
   group('Rondas multijugador de JuegoTurnoBloc', () {
     test('sincroniza dados, acción y ronda lista', () async {
       final tablero = Tablero(
@@ -445,9 +488,7 @@ void main() {
         anfitrion: 'socket-ana',
       );
 
-      bloc.add(
-        EventoEstadoListos(todosListos: true, listos: 1, total: 1),
-      );
+      bloc.add(EventoEstadoListos(todosListos: true, listos: 1, total: 1));
       await pumpEventQueue();
 
       expect(bloc.state.puedeLanzarDados, isTrue);

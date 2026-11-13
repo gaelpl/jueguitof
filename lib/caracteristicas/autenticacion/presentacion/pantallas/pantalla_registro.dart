@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../datos/servicios/servicio_autenticacion.dart';
 import '../../dominio/validaciones_autenticacion.dart';
 import '../../../juego/presentacion/pantallas/pantalla_menu_mapas.dart';
+import 'pantalla_login.dart';
 
 const Color _azulProfundo = Color(0xFF312E81);
 const Color _cian = Color(0xFF0EA5E9);
@@ -56,9 +57,15 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
     );
 
     if (resultado['exito'] == true) {
+      final bool sesionIniciada = resultado['sesionIniciada'] == true;
+
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const PantallaMenuMapas()),
+        MaterialPageRoute(
+          builder: (context) => sesionIniciada
+              ? const PantallaMenuMapas()
+              : const PantallaLogin(),
+        ),
         (route) => false,
       );
     }

@@ -5,7 +5,10 @@ class Dado {
   final int valor;
 
   const Dado([this.valor = 1])
-      : assert(valor >= 1 && valor <= 6, 'El valor del dado debe estar entre 1 y 6');
+    : assert(
+        valor >= 1 && valor <= 6,
+        'El valor del dado debe estar entre 1 y 6',
+      );
 
   /// Simula la tirada aleatoria de un dado obteniendo un valor del 1 al 6.
   static Dado lanzar({Random? random}) {

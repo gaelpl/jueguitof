@@ -5,7 +5,9 @@ abstract class LobbyEvento {
 }
 
 class CrearSalaSolicitada extends LobbyEvento {
-  const CrearSalaSolicitada();
+  final int numeroMapa;
+
+  const CrearSalaSolicitada({this.numeroMapa = 1});
 }
 
 class UnirseSalaSolicitada extends LobbyEvento {
@@ -32,6 +34,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
   final List<JugadorPartida> jugadores;
   final String? anfitrion;
   final bool iniciada;
+  final int numeroMapa;
   final int? puntosParaGanar;
 
   const SalaActualizadaRecibida({
@@ -39,6 +42,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
     required this.jugadores,
     this.anfitrion,
     this.iniciada = false,
+    this.numeroMapa = 1,
     this.puntosParaGanar,
   });
 }
@@ -47,6 +51,7 @@ class PartidaListaRecibida extends LobbyEvento {
   final String codigo;
   final List<JugadorPartida> jugadores;
   final int puntosParaGanar;
+  final int numeroMapa;
   final String? anfitrion;
   final String? tuIdSocket;
 
@@ -54,6 +59,7 @@ class PartidaListaRecibida extends LobbyEvento {
     required this.codigo,
     required this.jugadores,
     required this.puntosParaGanar,
+    this.numeroMapa = 1,
     this.anfitrion,
     this.tuIdSocket,
   });
@@ -69,4 +75,8 @@ class ErrorConexionRecibido extends LobbyEvento {
   final String mensaje;
 
   const ErrorConexionRecibido(this.mensaje);
+}
+
+class SesionInvalidaRecibida extends LobbyEvento {
+  const SesionInvalidaRecibida();
 }

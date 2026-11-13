@@ -16,6 +16,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final String? _codigoSala;
   final Duration _duracionMensajeAyuda;
   String? _tuIdSocket;
+  final Set<String> _regionesReclamadas = {};
   Timer? _temporizadorMensajeAyuda;
   Timer? _temporizadorRonda;
 
@@ -122,6 +123,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
             EventoPuntuacionesActualizadas(
               jugadores: _parsearJugadores(datos['jugadores']),
               puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
+              historialRegiones: _parsearHistorial(datos['historialRegiones']),
             ),
           );
         });
@@ -138,6 +140,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           ganadorUsuario: ganadorMap?['usuario']?.toString(),
           jugadores: _parsearJugadores(datos['jugadores']),
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
+          historialRegiones: _parsearHistorial(datos['historialRegiones']),
         ),
       );
     });
@@ -444,32 +447,31 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
 
     event.celdaObjetivo.asignarValor(dColocar.valor);
 
+    if (state.esMultijugador) {
+      emit(
+        state.copyWith(
+          tablero: state.tablero,
+          accionTurnoCompletada: true,
+          limpiarAncla: true,
+          limpiarMensajeAyuda: true,
+        ),
+      );
+      _reclamarRegionesCompletadas();
+      _emitirAccionTurno();
+      return;
+    }
+
     final nuevoPuntaje = calcularPuntuacionTotal(state.tablero);
-    final String? tuIdSocket = _tuIdSocket ?? state.tuIdSocket;
-    final List<JugadorPartida> jugadoresActualizados = state.jugadores
-        .map(
-          (jugador) => jugador.idSocket == tuIdSocket
-              ? jugador.copiarCon(puntuacion: nuevoPuntaje)
-              : jugador,
-        )
-        .toList();
 
     emit(
       state.copyWith(
         tablero: state.tablero,
         puntuacionTotal: nuevoPuntaje,
-        jugadores: jugadoresActualizados,
-        accionTurnoCompletada: state.esMultijugador,
         limpiarAncla: true,
-        limpiarDados: !state.esMultijugador,
+        limpiarDados: true,
         limpiarMensajeAyuda: true,
       ),
     );
-
-    _emitirPuntuacion(nuevoPuntaje);
-    if (state.esMultijugador) {
-      _emitirAccionTurno();
-    }
   }
 
   void _onMovimientoInvalido(
@@ -544,6 +546,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         puntuacionTotal: state.puntuacionTotal,
         mensajeAyuda: state.mensajeAyuda,
         jugadores: state.jugadores,
+        historialRegiones: state.historialRegiones,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
         anfitrion: state.anfitrion,
@@ -585,6 +588,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         puntuacionTotal: state.puntuacionTotal,
         mensajeAyuda: state.mensajeAyuda,
         jugadores: state.jugadores,
+        historialRegiones: state.historialRegiones,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
         anfitrion: state.anfitrion,
@@ -618,6 +622,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         puntuacionTotal: state.puntuacionTotal,
         mensajeAyuda: state.mensajeAyuda,
         jugadores: state.jugadores,
+        historialRegiones: state.historialRegiones,
         puntosParaGanar: state.puntosParaGanar,
         tuIdSocket: state.tuIdSocket,
         anfitrion: state.anfitrion,
@@ -644,6 +649,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     emit(
       state.copyWith(
         jugadores: event.jugadores,
+        historialRegiones: event.historialRegiones,
         puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
         tuIdSocket: tuIdSocket,
         puntuacionTotal: jugadorLocal?.puntuacion ?? state.puntuacionTotal,
@@ -658,6 +664,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     final String? tuIdSocket = _tuIdSocket ?? state.tuIdSocket;
     final bool esGanadorLocal =
         event.idSocketGanador != null && event.idSocketGanador == tuIdSocket;
+    final List<JugadorPartida> jugadores = event.jugadores.isEmpty
+        ? state.jugadores
+        : event.jugadores;
+    final JugadorPartida? jugadorLocal = _buscarJugador(jugadores, tuIdSocket);
 
     _temporizadorRonda?.cancel();
     _temporizadorRonda = null;
@@ -670,9 +680,12 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         indiceDadoAncla: state.indiceDadoAncla,
         celdaAncla: state.celdaAncla,
         celdasObjetivoValidas: state.celdasObjetivoValidas,
-        puntuacionTotal: state.puntuacionTotal,
+        puntuacionTotal: jugadorLocal?.puntuacion ?? state.puntuacionTotal,
         mensajeAyuda: state.mensajeAyuda,
-        jugadores: event.jugadores.isEmpty ? state.jugadores : event.jugadores,
+        jugadores: jugadores,
+        historialRegiones: event.historialRegiones.isEmpty
+            ? state.historialRegiones
+            : event.historialRegiones,
         puntosParaGanar: event.puntosParaGanar ?? state.puntosParaGanar,
         tuIdSocket: tuIdSocket,
         anfitrion: state.anfitrion,
@@ -740,14 +753,44 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     }
   }
 
-  void _emitirPuntuacion(int puntuacion) {
+  void _reclamarRegionesCompletadas() {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
-    try {
-      _servicioSocket.actualizarPuntuacion(_codigoSala, puntuacion);
-    } catch (_) {
-      return;
+    for (final Region region in Region.values) {
+      if (!estaRegionCompletada(state.tablero, region)) continue;
+      if (!_regionesReclamadas.add(region.name)) continue;
+
+      try {
+        _servicioSocket.reclamarRegion(_codigoSala, region.name);
+      } catch (_) {
+        _regionesReclamadas.remove(region.name);
+      }
     }
+  }
+
+  List<RegistroRegion> _parsearHistorial(dynamic valor) {
+    if (valor is! List) return const [];
+
+    final List<RegistroRegion> historial = [];
+    for (final dynamic registro in valor.whereType<Map>()) {
+      final Region? region = regionDesdeNombre(
+        registro['region']?.toString() ?? '',
+      );
+      if (region == null) continue;
+
+      historial.add(
+        RegistroRegion(
+          region: region,
+          usuario: registro['usuario']?.toString() ?? '',
+          socketId: registro['socketId']?.toString(),
+          puesto: _comoEntero(registro['puesto']) ?? 0,
+          puntos: _comoEntero(registro['puntos']) ?? 0,
+          numeroRonda: _comoEntero(registro['numeroRonda']) ?? 0,
+        ),
+      );
+    }
+
+    return historial;
   }
 
   List<JugadorPartida> _parsearJugadores(dynamic valor) {

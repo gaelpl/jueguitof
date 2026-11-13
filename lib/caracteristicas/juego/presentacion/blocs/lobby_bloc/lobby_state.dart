@@ -18,6 +18,7 @@ class EsperandoJugadores extends LobbyEstado {
   final String? anfitrion;
   final String? tuIdSocket;
   final int? puntosParaGanar;
+  final int numeroMapa;
 
   const EsperandoJugadores({
     required this.codigo,
@@ -25,6 +26,7 @@ class EsperandoJugadores extends LobbyEstado {
     this.anfitrion,
     this.tuIdSocket,
     this.puntosParaGanar,
+    this.numeroMapa = 1,
   });
 }
 
@@ -35,6 +37,7 @@ class IniciandoPartida extends EsperandoJugadores {
     super.anfitrion,
     super.tuIdSocket,
     super.puntosParaGanar,
+    super.numeroMapa,
   });
 }
 
@@ -48,6 +51,7 @@ class PartidaLista extends LobbyEstado {
   final int puntosParaGanar;
   final String? anfitrion;
   final String? tuIdSocket;
+  final int numeroMapa;
 
   const PartidaLista({
     required this.codigo,
@@ -55,6 +59,7 @@ class PartidaLista extends LobbyEstado {
     required this.puntosParaGanar,
     this.anfitrion,
     this.tuIdSocket,
+    this.numeroMapa = 1,
   });
 }
 
@@ -62,4 +67,8 @@ class ErrorLobby extends LobbyEstado {
   final String mensaje;
 
   const ErrorLobby({required this.mensaje});
+}
+
+class SesionExpiradaLobby extends LobbyEstado {
+  const SesionExpiradaLobby();
 }
