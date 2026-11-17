@@ -344,6 +344,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
         estado.jugadores.length >= 2 &&
         estado.todosListos &&
         !iniciando;
+    final bool tuListo = _tuListoEn(estado);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -489,19 +490,18 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
             children: [
               _BotonPrincipal(
                 cargando: iniciando,
-                texto: _tuListoEn(estado)
-                    ? 'Cancelar Listo'
-                    : 'Listo',
-                icono: _tuListoEn(estado)
+                texto: tuListo ? 'Cancelar Listo' : 'Listo',
+                icono: tuListo
                     ? Icons.cancel_outlined
                     : Icons.check_circle_outline,
+                activo: tuListo,
                 onPressed: iniciando
                     ? null
                     : () {
                         context.read<LobbyBloc>().add(
                           CambiarListoJugador(
                             codigo: estado.codigo,
-                            listo: !_tuListoEn(estado),
+                            listo: !tuListo,
                           ),
                         );
                       },
@@ -829,27 +829,36 @@ class _BotonPrincipal extends StatelessWidget {
   final String texto;
   final IconData icono;
   final VoidCallback? onPressed;
+  final bool activo;
 
   const _BotonPrincipal({
     required this.cargando,
     required this.texto,
     required this.icono,
     required this.onPressed,
+    this.activo = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final List<Color> colores = activo
+        ? const [Color(0xFF047857), Color(0xFF10B981)]
+        : const [_azulProfundo, _cian];
+    final Color colorSombra = activo
+        ? const Color(0xFF047857)
+        : _azulProfundo;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [_azulProfundo, _cian],
+          colors: colores,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _azulProfundo.withValues(alpha: 0.3),
+            color: colorSombra.withValues(alpha: 0.3),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),

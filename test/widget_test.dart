@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:jueguitof/caracteristicas/juego/dominio/entidades/jugador_partida.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_turno_bloc/juego_turno_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_juego_turno.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/pantallas/pantalla_menu_mapas.dart';
 
@@ -354,6 +356,113 @@ void main() {
         find.text('Esperando lanzamiento del anfitrión...'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('abre el mapa de un rival sin perder el Bloc del diálogo', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final tablero = Tablero(alto: 7, ancho: 7, celdas: [], zonas: []);
+      const List<JugadorPartida> jugadores = [
+        JugadorPartida(idSocket: 'socket-ana', idUsuario: 1, usuario: 'Ana'),
+        JugadorPartida(idSocket: 'socket-luis', idUsuario: 2, usuario: 'Luis'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaJuegoTurno(
+            tablero: tablero,
+            jugadores: jugadores,
+            tuIdSocket: 'socket-ana',
+            anfitrion: 'socket-ana',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final miniatura = find.byKey(const Key('mini-rival-socket-luis'));
+      expect(miniatura, findsOneWidget);
+
+      tester.element(miniatura).read<JuegoTurnoBloc>().add(
+        EventoTablerosActualizados(
+          tableros: {
+            'socket-luis': {
+              'numeroMapa': 1,
+              'numeroRonda': 2,
+              'celdas': [
+                {'columna': 2, 'fila': 0, 'valor': 4},
+              ],
+            },
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(miniatura);
+      await tester.pumpAndSettle();
+      await tester.tap(miniatura);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('dialogo-mapa-rival')), findsOneWidget);
+      expect(find.textContaining('Mapa de Luis'), findsOneWidget);
+      expect(find.textContaining('Ronda 2'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('cerrar-mapa-rival')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dialogo-mapa-rival')), findsNothing);
+    });
+
+    testWidgets('muestra solo el color en el historial de regiones', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final tablero = Tablero(alto: 7, ancho: 7, celdas: [], zonas: []);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaJuegoTurno(
+            tablero: tablero,
+            codigoSala: 'ABC123',
+            tuIdSocket: 'socket-ana',
+            anfitrion: 'socket-ana',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      tester.element(find.byKey(const Key('boton-lanzar-dados'))).read<
+        JuegoTurnoBloc
+      >().add(
+        EventoPuntuacionesActualizadas(
+          jugadores: const [],
+          historialRegiones: [
+            RegistroRegion(
+              region: Region.verdeEste,
+              usuario: 'Ana',
+              puesto: 1,
+              puntos: 6,
+              numeroRonda: 1,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Historial de regiones'), findsOneWidget);
+      expect(find.text('Verde'), findsOneWidget);
+      expect(find.text('Verde Este'), findsNothing);
     });
   });
 }

@@ -45,35 +45,30 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
 
       final LobbyEstado estadoActual = state;
       final String? tuIdSocket = estadoActual is EsperandoJugadores
-          ? estadoActual.tuIdSocket
-          : null;
+          ? (estadoActual.tuIdSocket ?? evento.tuIdSocket)
+          : evento.tuIdSocket;
 
-      if (estadoActual is IniciandoPartida) {
-        emitir(
-          IniciandoPartida(
-            codigo: evento.codigo,
-            jugadores: evento.jugadores,
-            anfitrion: evento.anfitrion,
-            tuIdSocket: tuIdSocket,
-            puntosParaGanar: evento.puntosParaGanar,
-            numeroMapa: evento.numeroMapa,
-            listosIds: evento.listosIds,
-          ),
-        );
-        return;
-      }
+      final EsperandoJugadores base = estadoActual is IniciandoPartida
+          ? IniciandoPartida(
+              codigo: evento.codigo,
+              jugadores: evento.jugadores,
+              anfitrion: evento.anfitrion,
+              tuIdSocket: tuIdSocket,
+              puntosParaGanar: evento.puntosParaGanar,
+              numeroMapa: evento.numeroMapa,
+              listosIds: evento.listosIds,
+            )
+          : EsperandoJugadores(
+              codigo: evento.codigo,
+              jugadores: evento.jugadores,
+              anfitrion: evento.anfitrion,
+              tuIdSocket: tuIdSocket,
+              puntosParaGanar: evento.puntosParaGanar,
+              numeroMapa: evento.numeroMapa,
+              listosIds: evento.listosIds,
+            );
 
-      emitir(
-        EsperandoJugadores(
-          codigo: evento.codigo,
-          jugadores: evento.jugadores,
-          anfitrion: evento.anfitrion,
-          tuIdSocket: tuIdSocket,
-          puntosParaGanar: evento.puntosParaGanar,
-          numeroMapa: evento.numeroMapa,
-          listosIds: evento.listosIds,
-        ),
-      );
+      emitir(_estadoConListos(base, evento.listosIds));
     });
     on<PartidaListaRecibida>(
       (evento, emitir) => emitir(
@@ -113,6 +108,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
           listosIds: _parsearIds(datos['listosIds']),
+          tuIdSocket: _servicioSocket.idActual,
         ),
       );
     });
@@ -134,6 +130,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           codigo: datos['codigo']?.toString() ?? '',
           listosIds: _parsearIds(datos['listosIds']),
           todosListos: datos['todosListos'] == true,
+          tuIdSocket: _servicioSocket.idActual,
         ),
       );
     });
@@ -254,11 +251,21 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     if (estadoActual is! EsperandoJugadores) return;
     if (estadoActual.codigo != evento.codigo) return;
 
+    final bool listoActual = _jugadorEstaListo(estadoActual);
+    final bool listoDestino = evento.listo == listoActual
+        ? !listoActual
+        : evento.listo;
+
+    emitir(_estadoConListo(estadoActual, listoDestino));
+
     try {
       if (!_servicioSocket.conectado) {
         await _servicioSocket.conectar();
       }
-      _servicioSocket.marcarJugadorListo(evento.codigo, listo: evento.listo);
+      _servicioSocket.marcarJugadorListo(
+        evento.codigo,
+        listo: listoDestino,
+      );
     } on SesionNoActivaException {
       emitir(const SesionExpiradaLobby());
     } catch (error) {
@@ -274,33 +281,87 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     if (estadoActual is! EsperandoJugadores) return;
     if (estadoActual.codigo != evento.codigo) return;
 
-    emitir(_estadoConListos(estadoActual, evento.listosIds));
+    emitir(
+      _estadoConListos(
+        estadoActual,
+        evento.listosIds,
+        tuIdSocket: estadoActual.tuIdSocket ?? evento.tuIdSocket,
+      ),
+    );
+  }
+
+  bool _jugadorEstaListo(EsperandoJugadores estado) {
+    final String? id = estado.tuIdSocket;
+    if (id == null) return false;
+    if (estado.listosIds.contains(id)) return true;
+    return estado.jugadores.any(
+      (jugador) => jugador.idSocket == id && jugador.listo,
+    );
+  }
+
+  EsperandoJugadores _estadoConListo(
+    EsperandoJugadores estado,
+    bool listo,
+  ) {
+    final String? id = estado.tuIdSocket;
+    final Set<String> ids = estado.listosIds.toSet();
+
+    if (id != null) {
+      if (listo) {
+        ids.add(id);
+      } else {
+        ids.remove(id);
+      }
+    }
+
+    final List<JugadorPartida> jugadores = estado.jugadores
+        .map(
+          (jugador) =>
+              jugador.idSocket == id ? jugador.copiarCon(listo: listo) : jugador,
+        )
+        .toList();
+
+    return _copiarEstado(estado, jugadores: jugadores, listosIds: ids.toList());
   }
 
   EsperandoJugadores _estadoConListos(
     EsperandoJugadores estado,
-    List<String> listosIds,
-  ) {
+    List<String> listosIds, {
+    String? tuIdSocket,
+  }) {
     final Set<String> ids = listosIds.toSet();
     final List<JugadorPartida> jugadores = estado.jugadores
         .map(
-          (jugador) => jugador.copiarCon(
-            listo: ids.isEmpty
-                ? jugador.listo
-                : ids.contains(jugador.idSocket),
-          ),
+          (jugador) =>
+              jugador.copiarCon(listo: ids.contains(jugador.idSocket)),
         )
         .toList();
+
+    return _copiarEstado(
+      estado,
+      jugadores: jugadores,
+      listosIds: ids.toList(),
+      tuIdSocket: tuIdSocket,
+    );
+  }
+
+  EsperandoJugadores _copiarEstado(
+    EsperandoJugadores estado, {
+    required List<JugadorPartida> jugadores,
+    required List<String> listosIds,
+    String? tuIdSocket,
+  }) {
+    final String? idSocket = tuIdSocket ?? estado.tuIdSocket;
 
     if (estado is IniciandoPartida) {
       return IniciandoPartida(
         codigo: estado.codigo,
         jugadores: jugadores,
         anfitrion: estado.anfitrion,
-        tuIdSocket: estado.tuIdSocket,
+        tuIdSocket: idSocket,
         puntosParaGanar: estado.puntosParaGanar,
         numeroMapa: estado.numeroMapa,
-        listosIds: ids.isEmpty ? estado.listosIds : listosIds,
+        listosIds: listosIds,
       );
     }
 
@@ -308,10 +369,10 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       codigo: estado.codigo,
       jugadores: jugadores,
       anfitrion: estado.anfitrion,
-      tuIdSocket: estado.tuIdSocket,
+      tuIdSocket: idSocket,
       puntosParaGanar: estado.puntosParaGanar,
       numeroMapa: estado.numeroMapa,
-      listosIds: ids.isEmpty ? estado.listosIds : listosIds,
+      listosIds: listosIds,
     );
   }
 

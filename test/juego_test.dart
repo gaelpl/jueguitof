@@ -2,11 +2,13 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguitof/caracteristicas/juego/datos/mapas_oficiales.dart';
+import 'package:jueguitof/caracteristicas/juego/dominio/entidades/jugador_partida.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/entidades/tablero_rival.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_turno_bloc/juego_turno_bloc.dart';
+import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/lobby_bloc/lobby_bloc.dart';
 import 'package:jueguitof/nucleo/tema/colores_region.dart';
 
 void main() {
@@ -1028,6 +1030,131 @@ void main() {
         bloc.state.tablerosRivales['socket-b']?.tablero.obtenerCeldaEn(2, 0)
             ?.valor,
         5,
+      );
+
+      await bloc.close();
+    });
+  });
+
+  group('LobbyBloc - estado Listo', () {
+    test('sincroniza el toggle hacia atrás con la lista de jugadores', () async {
+      final bloc = LobbyBloc();
+
+      bloc.add(SalaCreadaRecibida('ABC123', tuIdSocket: 'socket-luis'));
+      await pumpEventQueue();
+
+      bloc.add(
+        SalaActualizadaRecibida(
+          codigo: 'ABC123',
+          anfitrion: 'socket-ana',
+          jugadores: [
+            JugadorPartida(
+              idSocket: 'socket-ana',
+              idUsuario: 1,
+              usuario: 'Ana',
+              listo: true,
+            ),
+            JugadorPartida(
+              idSocket: 'socket-luis',
+              idUsuario: 2,
+              usuario: 'Luis',
+              listo: true,
+            ),
+          ],
+          listosIds: ['socket-ana', 'socket-luis'],
+        ),
+      );
+      await pumpEventQueue();
+
+      expect((bloc.state as EsperandoJugadores).todosListos, isTrue);
+
+      bloc.add(
+        EstadoListosRecibido(
+          codigo: 'ABC123',
+          listosIds: ['socket-ana'],
+          todosListos: false,
+        ),
+      );
+      await pumpEventQueue();
+
+      final esperando = bloc.state as EsperandoJugadores;
+      expect(
+        esperando.jugadores.firstWhere((j) => j.idSocket == 'socket-luis').listo,
+        isFalse,
+      );
+      expect(esperando.listosIds, equals(['socket-ana']));
+
+      bloc.add(
+        EstadoListosRecibido(
+          codigo: 'ABC123',
+          listosIds: const [],
+          todosListos: false,
+        ),
+      );
+      await pumpEventQueue();
+
+      final sinListos = bloc.state as EsperandoJugadores;
+      expect(
+        sinListos.jugadores.every((jugador) => !jugador.listo),
+        isTrue,
+      );
+      expect(sinListos.listosIds, isEmpty);
+
+      await bloc.close();
+    });
+
+    test('conserva el socket local para que el invitado pueda alternar', () async {
+      final bloc = LobbyBloc();
+
+      bloc.add(
+        SalaActualizadaRecibida(
+          codigo: 'ABC123',
+          anfitrion: 'socket-ana',
+          tuIdSocket: 'socket-luis',
+          jugadores: [
+            JugadorPartida(
+              idSocket: 'socket-ana',
+              idUsuario: 1,
+              usuario: 'Ana',
+              listo: true,
+            ),
+            JugadorPartida(
+              idSocket: 'socket-luis',
+              idUsuario: 2,
+              usuario: 'Luis',
+              listo: false,
+            ),
+          ],
+          listosIds: ['socket-ana'],
+        ),
+      );
+      await pumpEventQueue();
+
+      final inicial = bloc.state as EsperandoJugadores;
+      expect(inicial.tuIdSocket, 'socket-luis');
+      expect(
+        inicial.jugadores.firstWhere((j) => j.idSocket == 'socket-luis').listo,
+        isFalse,
+      );
+
+      bloc.add(
+        EstadoListosRecibido(
+          codigo: 'ABC123',
+          listosIds: ['socket-ana', 'socket-luis'],
+          todosListos: true,
+          tuIdSocket: 'socket-luis',
+        ),
+      );
+      await pumpEventQueue();
+
+      final actualizado = bloc.state as EsperandoJugadores;
+      expect(actualizado.tuIdSocket, 'socket-luis');
+      expect(actualizado.todosListos, isTrue);
+      expect(
+        actualizado.jugadores
+            .firstWhere((j) => j.idSocket == 'socket-luis')
+            .listo,
+        isTrue,
       );
 
       await bloc.close();

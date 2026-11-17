@@ -627,128 +627,134 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
   }
 
   void _mostrarMapaRival(BuildContext context, JugadorPartida rival) {
+    final JuegoTurnoBloc bloc = context.read<JuegoTurnoBloc>();
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          key: const Key('dialogo-mapa-rival'),
-          titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Mapa de ${rival.usuario}',
-                  style: const TextStyle(fontSize: 18),
+        return BlocProvider.value(
+          value: bloc,
+          child: AlertDialog(
+            key: const Key('dialogo-mapa-rival'),
+            titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Mapa de ${rival.usuario}',
+                    style: const TextStyle(fontSize: 18),
+                  ),
                 ),
+                IconButton(
+                  key: const Key('cerrar-mapa-rival'),
+                  tooltip: 'Cerrar',
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: (MediaQuery.of(dialogContext).size.width - 80).clamp(
+                180.0,
+                420.0,
               ),
-              IconButton(
-                key: const Key('cerrar-mapa-rival'),
-                tooltip: 'Cerrar',
+              child: BlocBuilder<JuegoTurnoBloc, JuegoTurnoEstado>(
+                builder: (mapContext, state) {
+                  final tableroRival = state.tablerosRivales[rival.idSocket];
+                  if (tableroRival == null) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'Esperando el tablero de este jugador...',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+
+                  final lado = (MediaQuery.of(mapContext).size.width - 96).clamp(
+                    180.0,
+                    420.0,
+                  );
+
+                  return SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Ronda ${tableroRival.numeroRonda} · ${rival.puntuacion} pts',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        AbsorbPointer(
+                          absorbing: true,
+                          child: SizedBox(
+                            width: lado,
+                            height: lado,
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 7,
+                                crossAxisSpacing: 3,
+                                mainAxisSpacing: 3,
+                              ),
+                              itemCount: 49,
+                              itemBuilder: (cellContext, index) {
+                                final celda =
+                                    tableroRival.tablero.obtenerCeldaEn(
+                                  index % 7,
+                                  index ~/ 7,
+                                );
+                                if (celda == null) return const SizedBox();
+
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: colorDeRegion(celda.region),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: celda.esEstrella
+                                          ? Colors.black
+                                          : Colors.white30,
+                                      width: celda.esEstrella ? 2.5 : 1,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: celda.valor == null
+                                        ? null
+                                        : Text(
+                                            '${celda.valor}',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: celda.region ==
+                                                          Region.amarillo ||
+                                                      celda.region ==
+                                                          Region.blanco
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                icon: const Icon(Icons.close),
+                child: const Text('Volver'),
               ),
             ],
           ),
-          content: SizedBox(
-            width: (MediaQuery.of(dialogContext).size.width - 80).clamp(
-              180.0,
-              420.0,
-            ),
-            child: BlocBuilder<JuegoTurnoBloc, JuegoTurnoEstado>(
-              builder: (context, state) {
-                final tableroRival = state.tablerosRivales[rival.idSocket];
-                if (tableroRival == null) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Text(
-                      'Esperando el tablero de este jugador...',
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-
-                final lado = (MediaQuery.of(context).size.width - 96).clamp(
-                  180.0,
-                  420.0,
-                );
-
-                return SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Ronda ${tableroRival.numeroRonda} · ${rival.puntuacion} pts',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      AbsorbPointer(
-                        absorbing: true,
-                        child: SizedBox(
-                          width: lado,
-                          height: lado,
-                          child: GridView.builder(
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 7,
-                              crossAxisSpacing: 3,
-                              mainAxisSpacing: 3,
-                            ),
-                            itemCount: 49,
-                            itemBuilder: (context, index) {
-                              final celda = tableroRival.tablero.obtenerCeldaEn(
-                                index % 7,
-                                index ~/ 7,
-                              );
-                              if (celda == null) return const SizedBox();
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: colorDeRegion(celda.region),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: celda.esEstrella
-                                        ? Colors.black
-                                        : Colors.white30,
-                                    width: celda.esEstrella ? 2.5 : 1,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: celda.valor == null
-                                      ? null
-                                      : Text(
-                                          '${celda.valor}',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                celda.region == Region.amarillo ||
-                                                    celda.region == Region.blanco
-                                                ? Colors.black
-                                                : Colors.white,
-                                          ),
-                                        ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Volver'),
-            ),
-          ],
         );
       },
     );
@@ -1005,10 +1011,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             itemBuilder: (context, index) {
               final RegistroRegion registro = state.historialRegiones[index];
               final Color color = colorDeRegion(registro.region);
-              final String bloque = nombreBloqueRegion(registro.region);
-              final String nombre = bloque.isEmpty
-                  ? nombreDeRegion(registro.region)
-                  : '${nombreDeRegion(registro.region)} $bloque';
+              final String nombre = nombreDeRegion(registro.region);
 
               return Container(
                 key: Key(

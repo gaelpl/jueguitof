@@ -37,6 +37,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
   final int numeroMapa;
   final int? puntosParaGanar;
   final List<String> listosIds;
+  final String? tuIdSocket;
 
   const SalaActualizadaRecibida({
     required this.codigo,
@@ -46,6 +47,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
     this.numeroMapa = 1,
     this.puntosParaGanar,
     this.listosIds = const [],
+    this.tuIdSocket,
   });
 }
 
@@ -71,11 +73,13 @@ class EstadoListosRecibido extends LobbyEvento {
   final String codigo;
   final List<String> listosIds;
   final bool todosListos;
+  final String? tuIdSocket;
 
   const EstadoListosRecibido({
     required this.codigo,
     this.listosIds = const [],
     this.todosListos = false,
+    this.tuIdSocket,
   });
 }
 
