@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguitof/caracteristicas/juego/datos/mapas_oficiales.dart';
+import 'package:jueguitof/caracteristicas/juego/dominio/entidades/tablero_rival.dart';
 import 'package:jueguitof/caracteristicas/juego/dominio/logica/juego_logica.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
 import 'package:jueguitof/caracteristicas/juego/presentacion/blocs/juego_bloc.dart';
@@ -499,7 +500,7 @@ void main() {
           dado2: const Dado(5),
           anfitrion: 'socket-ana',
           numeroRonda: 1,
-          segundosRestantes: 300,
+          segundosRestantes: 30,
         ),
       );
       await pumpEventQueue();
@@ -509,7 +510,7 @@ void main() {
       expect(bloc.state.puedeSaltarTurno, isTrue);
       expect(bloc.state.dado1?.valor, 3);
       expect(bloc.state.dado2?.valor, 5);
-      expect(bloc.state.segundosRestantesRonda, 300);
+      expect(bloc.state.segundosRestantesRonda, 30);
 
       bloc.add(EventoSaltarTurno());
       await pumpEventQueue();
@@ -633,6 +634,46 @@ void main() {
         expect(bloc.state.dadoColocar?.valor, equals(5));
       },
     );
+
+    test('resalta todas las celdas con el valor del dado ancla', () async {
+      final tableroLocal = Tablero(
+        alto: 7,
+        ancho: 7,
+        celdas: [
+          Celda(columna: 0, fila: 0, region: Region.azulNorte, valor: 3),
+          Celda(columna: 1, fila: 0, region: Region.verdeNoroeste),
+          Celda(columna: 3, fila: 3, region: Region.amarillo, valor: 3),
+          Celda(columna: 3, fila: 4, region: Region.verdeNoroeste),
+          Celda(columna: 6, fila: 6, region: Region.blanco, valor: 4),
+        ],
+        zonas: [
+          Zona(region: Region.azulNorte, tipo: TipoAzul()),
+          Zona(region: Region.verdeNoroeste, tipo: TipoVerde()),
+        ],
+      );
+      final blocLocal = JuegoTurnoBloc(tableroLocal);
+
+      blocLocal.add(
+        EventoLanzarDados(
+          dado1Forzado: const Dado(3),
+          dado2Forzado: const Dado(5),
+        ),
+      );
+      await pumpEventQueue();
+
+      blocLocal.add(EventoSeleccionarDadoAncla(0));
+      await pumpEventQueue();
+
+      expect(
+        blocLocal.state.celdasAnclaCandidatas
+            .map((celda) => '${celda.columna},${celda.fila}')
+            .toList(),
+        equals(['0,0', '3,3']),
+      );
+      expect(blocLocal.state.celdasObjetivoValidas, isNotEmpty);
+
+      await blocLocal.close();
+    });
 
     test(
       'seleccionar casilla ancla valida que coincida con el dado ancla',
@@ -931,6 +972,62 @@ void main() {
           (estrella) => estrella.valor == null,
         ),
         isTrue,
+      );
+
+      await bloc.close();
+    });
+  });
+
+  group('Modo Espía', () {
+    test('reconstruye el tablero de un rival desde un snapshot', () {
+      final tableroRival = TableroRival.desdeJson({
+        'numeroMapa': 1,
+        'numeroRonda': 2,
+        'actualizadoEn': 1700000000000,
+        'celdas': [
+          {'columna': 2, 'fila': 0, 'valor': 4},
+          {'columna': 5, 'fila': 1, 'valor': 6},
+        ],
+      });
+
+      expect(tableroRival.numeroRonda, 2);
+      expect(tableroRival.tablero.obtenerCeldaEn(2, 0)?.valor, 4);
+      expect(tableroRival.tablero.obtenerCeldaEn(5, 1)?.valor, 6);
+      expect(tableroRival.tablero.obtenerCeldaEn(0, 0)?.valor, isNull);
+    });
+
+    test('guarda snapshots de rivales y ignora el tablero local', () async {
+      final bloc = JuegoTurnoBloc(
+        CreadorMapas.mapa1(),
+        tuIdSocket: 'socket-a',
+      );
+
+      bloc.add(
+        EventoTablerosActualizados(
+          tableros: {
+            'socket-a': {
+              'numeroMapa': 1,
+              'celdas': [
+                {'columna': 2, 'fila': 0, 'valor': 1},
+              ],
+            },
+            'socket-b': {
+              'numeroMapa': 1,
+              'numeroRonda': 3,
+              'celdas': [
+                {'columna': 2, 'fila': 0, 'valor': 5},
+              ],
+            },
+          },
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(bloc.state.tablerosRivales.keys, equals(['socket-b']));
+      expect(
+        bloc.state.tablerosRivales['socket-b']?.tablero.obtenerCeldaEn(2, 0)
+            ?.valor,
+        5,
       );
 
       await bloc.close();

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../datos/servicios/servicio_socket.dart';
 import '../../../dominio/entidades/jugador_partida.dart';
+import '../../../dominio/entidades/tablero_rival.dart';
 import '../../../dominio/logica/juego_logica.dart';
 import 'juego_turno_event.dart';
 import 'juego_turno_state.dart';
@@ -14,6 +15,7 @@ export 'juego_turno_state.dart';
 class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   final ServicioSocket _servicioSocket;
   final String? _codigoSala;
+  final int _numeroMapa;
   final Duration _duracionMensajeAyuda;
   String? _tuIdSocket;
   final Set<String> _regionesReclamadas = {};
@@ -32,11 +34,14 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   late final StreamSubscription<Map<String, dynamic>>
   _suscripcionJugadorDesconectado;
   late final StreamSubscription<Map<String, dynamic>> _suscripcionEstadoListos;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionTablerosActualizados;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
     ServicioSocket? servicioSocket,
     String? codigoSala,
+    int numeroMapa = 1,
     Duration? duracionMensajeAyuda,
     List<JugadorPartida> jugadores = const [],
     int? puntosParaGanar,
@@ -44,6 +49,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     String? anfitrion,
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
+       _numeroMapa = numeroMapa,
        _tuIdSocket = tuIdSocket,
        _duracionMensajeAyuda =
            duracionMensajeAyuda ?? const Duration(seconds: 4),
@@ -75,6 +81,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoPartidaGanada>(_onPartidaGanada);
     on<EventoJugadorSalio>(_onJugadorSalio);
     on<EventoEstadoListos>(_onEstadoListos);
+    on<EventoTablerosActualizados>(_onTablerosActualizados);
 
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => add(EventoRivalConcedio()),
@@ -99,9 +106,10 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
           segundosRestantes:
               _comoEntero(datos['segundosRestantes']) ??
               _comoEntero(datos['duracionRondaSegundos']) ??
-              300,
+              duracionRondaPorDefecto,
           duracionRondaSegundos:
-              _comoEntero(datos['duracionRondaSegundos']) ?? 300,
+              _comoEntero(datos['duracionRondaSegundos']) ??
+              duracionRondaPorDefecto,
         ),
       );
     });
@@ -180,11 +188,29 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       );
     });
 
+    _suscripcionTablerosActualizados = _servicioSocket.tablerosActualizados
+        .listen((datos) {
+          final dynamic tableros = datos['tableros'];
+          if (tableros is Map) {
+            add(
+              EventoTablerosActualizados(
+                tableros: Map<String, dynamic>.from(
+                  tableros.map(
+                    (clave, valor) => MapEntry(clave.toString(), valor),
+                  ),
+                ),
+              ),
+            );
+          }
+        });
+
     if (_codigoSala != null) {
       _servicioSocket.iniciarPartida();
       _tuIdSocket ??= _servicioSocket.idActual;
       try {
         _servicioSocket.consultarEstadoListos(_codigoSala);
+        _servicioSocket.consultarTableros(_codigoSala);
+        _enviarTableroLocal();
       } catch (_) {}
     }
   }
@@ -345,14 +371,42 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   ) {
     if (_bloquearSiNoPuedeActuar(emit)) return;
 
-    if (state.dado1 != null && state.dado2 != null) {
-      emit(
-        state.copyWith(
-          indiceDadoAncla: event.indiceDadoAncla,
-          limpiarAncla: true,
-          limpiarMensajeAyuda: true,
-        ),
-      );
+    if (state.dado1 == null || state.dado2 == null) return;
+
+    emit(
+      state.copyWith(
+        indiceDadoAncla: event.indiceDadoAncla,
+        limpiarAncla: true,
+        limpiarMensajeAyuda: true,
+      ),
+    );
+
+    _resaltarObjetivosDelDado(emit);
+  }
+
+  void _resaltarObjetivosDelDado(Emitter<JuegoTurnoEstado> emit) {
+    final Dado? ancla = state.dadoAncla;
+    final Dado? colocar = state.dadoColocar;
+    if (ancla == null || colocar == null) return;
+
+    final candidatas = obtenerCeldasConValor(state.tablero, ancla.valor);
+    final validas = obtenerObjetivosParaValorAncla(
+      tablero: state.tablero,
+      valorAncla: ancla.valor,
+      valorAColocar: colocar.valor,
+    );
+
+    emit(
+      state.copyWith(
+        celdasAnclaCandidatas: candidatas,
+        celdasObjetivoValidas: validas,
+        limpiarCeldaAncla: true,
+        limpiarMensajeAyuda: validas.isNotEmpty,
+      ),
+    );
+
+    if (validas.isEmpty) {
+      _mostrarMensajeAyuda(mensajeAnclaSinOpciones(colocar.valor), emit);
     }
   }
 
@@ -409,6 +463,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
       state.copyWith(
         indiceDadoAncla: indiceAncla,
         celdaAncla: event.celdaAncla,
+        celdasAnclaCandidatas: [event.celdaAncla],
         celdasObjetivoValidas: validas,
         limpiarMensajeAyuda: validas.isNotEmpty,
       ),
@@ -446,6 +501,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     }
 
     event.celdaObjetivo.asignarValor(dColocar.valor);
+    _enviarTableroLocal();
 
     if (state.esMultijugador) {
       emit(
@@ -743,6 +799,54 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     );
   }
 
+  void _onTablerosActualizados(
+    EventoTablerosActualizados event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    final Map<String, TableroRival> rivales = {};
+
+    event.tableros.forEach((idSocket, valores) {
+      if (idSocket == _tuIdSocket || valores is! Map) return;
+      rivales[idSocket] = TableroRival.desdeJson(
+        Map<String, dynamic>.from(valores),
+      );
+    });
+
+    emit(state.copyWith(tablerosRivales: rivales));
+  }
+
+  Map<String, dynamic> _serializarTableroLocal() {
+    return {
+      'numeroMapa': _numeroMapa,
+      'numeroRonda': state.numeroRonda,
+      'puntuacion': state.puntuacionTotal,
+      'celdas': state.tablero.celdas
+          .map(
+            (celda) => {
+              'columna': celda.columna,
+              'fila': celda.fila,
+              'valor': celda.valor,
+              'region': celda.region.name,
+              'esEstrella': celda.esEstrella,
+            },
+          )
+          .toList(),
+    };
+  }
+
+  void _enviarTableroLocal() {
+    if (_codigoSala == null || !_servicioSocket.conectado) return;
+
+    try {
+      _servicioSocket.enviarTablero(
+        _codigoSala,
+        _serializarTableroLocal(),
+      );
+    } catch (_) {
+      return;
+    }
+  }
+
   void _emitirAccionTurno() {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
@@ -848,6 +952,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     await _suscripcionJugadorConcedio.cancel();
     await _suscripcionJugadorDesconectado.cancel();
     await _suscripcionEstadoListos.cancel();
+    await _suscripcionTablerosActualizados.cancel();
     if (_codigoSala != null) {
       _servicioSocket.finalizarPartida();
     }

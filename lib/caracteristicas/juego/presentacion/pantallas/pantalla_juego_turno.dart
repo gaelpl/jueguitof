@@ -16,6 +16,7 @@ import 'pantalla_reglas.dart';
 /// Pantalla Principal de Juego por Turnos
 class PantallaJuegoTurno extends StatefulWidget {
   final Tablero tablero;
+  final int numeroMapa;
   final String? codigoSala;
   final List<JugadorPartida> jugadores;
   final int? puntosParaGanar;
@@ -25,6 +26,7 @@ class PantallaJuegoTurno extends StatefulWidget {
   const PantallaJuegoTurno({
     super.key,
     required this.tablero,
+    this.numeroMapa = 1,
     this.codigoSala,
     this.jugadores = const [],
     this.puntosParaGanar,
@@ -90,6 +92,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
       create: (_) => JuegoTurnoBloc(
         widget.tablero,
         codigoSala: widget.codigoSala,
+        numeroMapa: widget.numeroMapa,
         jugadores: widget.jugadores,
         puntosParaGanar: widget.puntosParaGanar,
         tuIdSocket: widget.tuIdSocket,
@@ -200,10 +203,6 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                     )
                                   : _construirBannerAyuda(state.mensajeAyuda!),
                             ),
-                            _construirMarcador(context, state),
-
-                            _construirLeyenda(state),
-                            _construirHistorial(state),
                             const SizedBox(height: 8),
                             SizedBox(
                               key: const Key('tablero-juego'),
@@ -234,7 +233,10 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                     if (celda == null) return const SizedBox();
 
                                     final bool esAncla =
-                                        state.celdaAncla == celda;
+                                        state.celdaAncla == celda ||
+                                        state.celdasAnclaCandidatas.contains(
+                                          celda,
+                                        );
                                     final bool esObjetivoValido = state
                                         .celdasObjetivoValidas
                                         .contains(celda);
@@ -485,11 +487,16 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                         style: TextStyle(fontSize: 16),
                                       ),
                                     ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                                 ],
+                               ),
+                             ),
+                             const SizedBox(height: 12),
+                             _construirMarcador(context, state),
+                             _construirLeyenda(state),
+                             _construirHistorial(state),
+                             _construirModoEspia(context, state),
+                           ],
+                         ),
                       );
                     },
                   ),
@@ -499,6 +506,251 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _construirModoEspia(BuildContext context, JuegoTurnoEstado state) {
+    if (!state.esMultijugador || state.tuIdSocket == null) {
+      return const SizedBox.shrink();
+    }
+
+    final rivales = state.jugadores
+        .where((jugador) => jugador.idSocket != state.tuIdSocket)
+        .toList();
+
+    if (rivales.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Mapas de rivales (Modo Espía)',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 66,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: rivales.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final jugador = rivales[index];
+                final bool disponible =
+                    state.tablerosRivales.containsKey(jugador.idSocket);
+                final String inicial = jugador.usuario.isEmpty
+                    ? '?'
+                    : jugador.usuario[0].toUpperCase();
+
+                return SizedBox(
+                  width: 128,
+                  child: InkWell(
+                    key: Key('mini-rival-${jugador.idSocket}'),
+                    onTap: disponible
+                        ? () => _mostrarMapaRival(context, jugador)
+                        : null,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: disponible ? Colors.white : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: disponible
+                              ? Colors.blue.shade300
+                              : Colors.grey.shade400,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: disponible
+                                ? Colors.blue.shade700
+                                : Colors.grey.shade500,
+                            child: Text(
+                              inicial,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  jugador.usuario,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  disponible ? 'Ver mapa' : 'Sin datos',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: disponible
+                                        ? Colors.blue.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarMapaRival(BuildContext context, JugadorPartida rival) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          key: const Key('dialogo-mapa-rival'),
+          titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Mapa de ${rival.usuario}',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+              IconButton(
+                key: const Key('cerrar-mapa-rival'),
+                tooltip: 'Cerrar',
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: (MediaQuery.of(dialogContext).size.width - 80).clamp(
+              180.0,
+              420.0,
+            ),
+            child: BlocBuilder<JuegoTurnoBloc, JuegoTurnoEstado>(
+              builder: (context, state) {
+                final tableroRival = state.tablerosRivales[rival.idSocket];
+                if (tableroRival == null) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Esperando el tablero de este jugador...',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+
+                final lado = (MediaQuery.of(context).size.width - 96).clamp(
+                  180.0,
+                  420.0,
+                );
+
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ronda ${tableroRival.numeroRonda} · ${rival.puntuacion} pts',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AbsorbPointer(
+                        absorbing: true,
+                        child: SizedBox(
+                          width: lado,
+                          height: lado,
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              crossAxisSpacing: 3,
+                              mainAxisSpacing: 3,
+                            ),
+                            itemCount: 49,
+                            itemBuilder: (context, index) {
+                              final celda = tableroRival.tablero.obtenerCeldaEn(
+                                index % 7,
+                                index ~/ 7,
+                              );
+                              if (celda == null) return const SizedBox();
+
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: colorDeRegion(celda.region),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: celda.esEstrella
+                                        ? Colors.black
+                                        : Colors.white30,
+                                    width: celda.esEstrella ? 2.5 : 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: celda.valor == null
+                                      ? null
+                                      : Text(
+                                          '${celda.valor}',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                celda.region == Region.amarillo ||
+                                                    celda.region == Region.blanco
+                                                ? Colors.black
+                                                : Colors.white,
+                                          ),
+                                        ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Volver'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -531,7 +783,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: state.segundosRestantesRonda <= 30
+            color: state.segundosRestantesRonda <= 10
                 ? Colors.red.shade700
                 : Colors.black87,
           ),

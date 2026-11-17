@@ -19,6 +19,7 @@ class EsperandoJugadores extends LobbyEstado {
   final String? tuIdSocket;
   final int? puntosParaGanar;
   final int numeroMapa;
+  final List<String> listosIds;
 
   const EsperandoJugadores({
     required this.codigo,
@@ -27,7 +28,14 @@ class EsperandoJugadores extends LobbyEstado {
     this.tuIdSocket,
     this.puntosParaGanar,
     this.numeroMapa = 1,
+    this.listosIds = const [],
   });
+
+  bool get todosListos =>
+      jugadores.isNotEmpty &&
+      jugadores.every(
+        (jugador) => jugador.listo || listosIds.contains(jugador.idSocket),
+      );
 }
 
 class IniciandoPartida extends EsperandoJugadores {
@@ -38,6 +46,7 @@ class IniciandoPartida extends EsperandoJugadores {
     super.tuIdSocket,
     super.puntosParaGanar,
     super.numeroMapa,
+    super.listosIds,
   });
 }
 

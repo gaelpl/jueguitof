@@ -36,6 +36,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
   final bool iniciada;
   final int numeroMapa;
   final int? puntosParaGanar;
+  final List<String> listosIds;
 
   const SalaActualizadaRecibida({
     required this.codigo,
@@ -44,6 +45,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
     this.iniciada = false,
     this.numeroMapa = 1,
     this.puntosParaGanar,
+    this.listosIds = const [],
   });
 }
 
@@ -62,6 +64,28 @@ class PartidaListaRecibida extends LobbyEvento {
     this.numeroMapa = 1,
     this.anfitrion,
     this.tuIdSocket,
+  });
+}
+
+class EstadoListosRecibido extends LobbyEvento {
+  final String codigo;
+  final List<String> listosIds;
+  final bool todosListos;
+
+  const EstadoListosRecibido({
+    required this.codigo,
+    this.listosIds = const [],
+    this.todosListos = false,
+  });
+}
+
+class CambiarListoJugador extends LobbyEvento {
+  final String codigo;
+  final bool listo;
+
+  const CambiarListoJugador({
+    required this.codigo,
+    required this.listo,
   });
 }
 

@@ -20,6 +20,7 @@ void main() {
       for (int i = 1; i <= 4; i++) {
         expect(find.text('Mapa $i'), findsOneWidget);
       }
+      expect(find.text('Tu próximo desafío'), findsNothing);
 
       // 3. Entrar al Mapa 1
       await tester.tap(find.text('Mapa 1'));

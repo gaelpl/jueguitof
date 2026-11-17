@@ -9,12 +9,14 @@ void main() {
         'idUsuario': 7,
         'usuario': 'Ana',
         'puntuacion': 12,
+        'listo': true,
       });
 
       expect(jugador.idSocket, 'socket-1');
       expect(jugador.idUsuario, 7);
       expect(jugador.usuario, 'Ana');
       expect(jugador.puntuacion, 12);
+      expect(jugador.listo, isTrue);
     });
 
     test('usa valores por defecto si faltan datos', () {
@@ -24,6 +26,7 @@ void main() {
       expect(jugador.idUsuario, 0);
       expect(jugador.usuario, 'Jugador');
       expect(jugador.puntuacion, 0);
+      expect(jugador.listo, isFalse);
     });
 
     test('copia el jugador actualizando solo su puntuación', () {
@@ -39,6 +42,7 @@ void main() {
       expect(actualizado.idSocket, 'socket-1');
       expect(actualizado.usuario, 'Ana');
       expect(actualizado.puntuacion, 10);
+      expect(actualizado.listo, isFalse);
       expect(jugador.puntuacion, 4);
     });
   });

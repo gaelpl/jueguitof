@@ -18,6 +18,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
   _suscripcionSalaActualizada;
   late final StreamSubscription<Map<String, dynamic>> _suscripcionPartidaLista;
   late final StreamSubscription<String> _suscripcionErrorSala;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionEstadoListos;
   late final StreamSubscription<String> _suscripcionErrorConexion;
   late final StreamSubscription<bool> _suscripcionSesionInvalida;
 
@@ -27,6 +29,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     on<CrearSalaSolicitada>(_alSolicitarCrearSala);
     on<UnirseSalaSolicitada>(_alSolicitarUnirseSala);
     on<IniciarPartidaSolicitada>(_alSolicitarIniciarPartida);
+    on<CambiarListoJugador>(_alCambiarListo);
+    on<EstadoListosRecibido>(_alRecibirEstadoListos);
     on<SalaCreadaRecibida>(
       (evento, emitir) => emitir(
         EsperandoJugadores(
@@ -53,6 +57,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
             tuIdSocket: tuIdSocket,
             puntosParaGanar: evento.puntosParaGanar,
             numeroMapa: evento.numeroMapa,
+            listosIds: evento.listosIds,
           ),
         );
         return;
@@ -66,6 +71,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           tuIdSocket: tuIdSocket,
           puntosParaGanar: evento.puntosParaGanar,
           numeroMapa: evento.numeroMapa,
+          listosIds: evento.listosIds,
         ),
       );
     });
@@ -106,6 +112,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           iniciada: datos['iniciada'] == true,
           numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
+          listosIds: _parsearIds(datos['listosIds']),
         ),
       );
     });
@@ -118,6 +125,15 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           anfitrion: datos['anfitrion']?.toString(),
           tuIdSocket: datos['tuSocketId']?.toString(),
+        ),
+      );
+    });
+    _suscripcionEstadoListos = _servicioSocket.estadoListos.listen((datos) {
+      add(
+        EstadoListosRecibido(
+          codigo: datos['codigo']?.toString() ?? '',
+          listosIds: _parsearIds(datos['listosIds']),
+          todosListos: datos['todosListos'] == true,
         ),
       );
     });
@@ -197,6 +213,15 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       return;
     }
 
+    if (!estadoActual.todosListos) {
+      emitir(
+        const ErrorLobby(
+          mensaje: 'Todos los jugadores deben estar listos para iniciar.',
+        ),
+      );
+      return;
+    }
+
     emitir(
       IniciandoPartida(
         codigo: estadoActual.codigo,
@@ -205,6 +230,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         tuIdSocket: estadoActual.tuIdSocket,
         puntosParaGanar: estadoActual.puntosParaGanar,
         numeroMapa: estadoActual.numeroMapa,
+        listosIds: estadoActual.listosIds,
       ),
     );
 
@@ -218,6 +244,80 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     } catch (error) {
       emitir(ErrorLobby(mensaje: _limpiarMensajeError(error)));
     }
+  }
+
+  Future<void> _alCambiarListo(
+    CambiarListoJugador evento,
+    Emitter<LobbyEstado> emitir,
+  ) async {
+    final LobbyEstado estadoActual = state;
+    if (estadoActual is! EsperandoJugadores) return;
+    if (estadoActual.codigo != evento.codigo) return;
+
+    try {
+      if (!_servicioSocket.conectado) {
+        await _servicioSocket.conectar();
+      }
+      _servicioSocket.marcarJugadorListo(evento.codigo, listo: evento.listo);
+    } on SesionNoActivaException {
+      emitir(const SesionExpiradaLobby());
+    } catch (error) {
+      emitir(ErrorLobby(mensaje: _limpiarMensajeError(error)));
+    }
+  }
+
+  void _alRecibirEstadoListos(
+    EstadoListosRecibido evento,
+    Emitter<LobbyEstado> emitir,
+  ) {
+    final LobbyEstado estadoActual = state;
+    if (estadoActual is! EsperandoJugadores) return;
+    if (estadoActual.codigo != evento.codigo) return;
+
+    emitir(_estadoConListos(estadoActual, evento.listosIds));
+  }
+
+  EsperandoJugadores _estadoConListos(
+    EsperandoJugadores estado,
+    List<String> listosIds,
+  ) {
+    final Set<String> ids = listosIds.toSet();
+    final List<JugadorPartida> jugadores = estado.jugadores
+        .map(
+          (jugador) => jugador.copiarCon(
+            listo: ids.isEmpty
+                ? jugador.listo
+                : ids.contains(jugador.idSocket),
+          ),
+        )
+        .toList();
+
+    if (estado is IniciandoPartida) {
+      return IniciandoPartida(
+        codigo: estado.codigo,
+        jugadores: jugadores,
+        anfitrion: estado.anfitrion,
+        tuIdSocket: estado.tuIdSocket,
+        puntosParaGanar: estado.puntosParaGanar,
+        numeroMapa: estado.numeroMapa,
+        listosIds: ids.isEmpty ? estado.listosIds : listosIds,
+      );
+    }
+
+    return EsperandoJugadores(
+      codigo: estado.codigo,
+      jugadores: jugadores,
+      anfitrion: estado.anfitrion,
+      tuIdSocket: estado.tuIdSocket,
+      puntosParaGanar: estado.puntosParaGanar,
+      numeroMapa: estado.numeroMapa,
+      listosIds: ids.isEmpty ? estado.listosIds : listosIds,
+    );
+  }
+
+  List<String> _parsearIds(dynamic valor) {
+    if (valor is! List) return const [];
+    return valor.whereType<String>().toList();
   }
 
   List<JugadorPartida> _parsearJugadores(dynamic valor) {
@@ -252,6 +352,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     await _suscripcionSalaActualizada.cancel();
     await _suscripcionPartidaLista.cancel();
     await _suscripcionErrorSala.cancel();
+    await _suscripcionEstadoListos.cancel();
     await _suscripcionErrorConexion.cancel();
     await _suscripcionSesionInvalida.cancel();
     return super.close();

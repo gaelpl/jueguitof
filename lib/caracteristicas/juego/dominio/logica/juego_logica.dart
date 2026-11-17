@@ -6,6 +6,8 @@ import '../entidades/tablero.dart';
 export '../entidades/tablero.dart';
 export '../entidades/dado.dart';
 
+const int duracionRondaPorDefecto = 30;
+
 int calcular() {
   return 6 * 7;
 }
@@ -409,6 +411,34 @@ List<Celda> obtenerCeldasObjetivoValidas({
 
       if (zona != null &&
           zona.esInsercionValida(valoresActuales, valorAColocar)) {
+        validas.add(celda);
+      }
+    }
+  }
+
+  return validas;
+}
+
+List<Celda> obtenerCeldasConValor(Tablero tablero, int valor) {
+  return tablero.celdas.where((celda) => celda.valor == valor).toList();
+}
+
+List<Celda> obtenerObjetivosParaValorAncla({
+  required Tablero tablero,
+  required int valorAncla,
+  required int valorAColocar,
+}) {
+  final vistos = <String>{};
+  final validas = <Celda>[];
+
+  for (final ancla in obtenerCeldasConValor(tablero, valorAncla)) {
+    for (final celda in obtenerCeldasObjetivoValidas(
+      tablero: tablero,
+      celdaAncla: ancla,
+      valorAColocar: valorAColocar,
+    )) {
+      final clave = '${celda.columna},${celda.fila}';
+      if (vistos.add(clave)) {
         validas.add(celda);
       }
     }

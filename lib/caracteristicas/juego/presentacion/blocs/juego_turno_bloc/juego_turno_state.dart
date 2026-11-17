@@ -1,4 +1,5 @@
 import '../../../dominio/entidades/jugador_partida.dart';
+import '../../../dominio/entidades/tablero_rival.dart';
 import '../../../dominio/logica/juego_logica.dart';
 
 class JuegoTurnoEstado {
@@ -7,6 +8,7 @@ class JuegoTurnoEstado {
   final Dado? dado2;
   final int? indiceDadoAncla; // 0 si dado1 es ancla, 1 si dado2 es ancla
   final Celda? celdaAncla;
+  final List<Celda> celdasAnclaCandidatas;
   final List<Celda> celdasObjetivoValidas;
   final int puntuacionTotal;
   final String? mensajeAyuda;
@@ -24,6 +26,7 @@ class JuegoTurnoEstado {
   final bool todosListos;
   final int jugadoresListos;
   final int totalJugadores;
+  final Map<String, TableroRival> tablerosRivales;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -31,6 +34,7 @@ class JuegoTurnoEstado {
     this.dado2,
     this.indiceDadoAncla,
     this.celdaAncla,
+    this.celdasAnclaCandidatas = const [],
     this.celdasObjetivoValidas = const [],
     this.puntuacionTotal = 0,
     this.mensajeAyuda,
@@ -44,10 +48,11 @@ class JuegoTurnoEstado {
     this.accionTurnoCompletada = false,
     this.esperandoDados = false,
     this.segundosRestantesRonda = 0,
-    this.duracionRondaSegundos = 300,
+    this.duracionRondaSegundos = duracionRondaPorDefecto,
     this.todosListos = false,
     this.jugadoresListos = 0,
     this.totalJugadores = 0,
+    this.tablerosRivales = const {},
   });
 
   bool get esMultijugador => anfitrion != null;
@@ -88,6 +93,7 @@ class JuegoTurnoEstado {
     Dado? dado2,
     int? indiceDadoAncla,
     Celda? celdaAncla,
+    List<Celda>? celdasAnclaCandidatas,
     List<Celda>? celdasObjetivoValidas,
     int? puntuacionTotal,
     String? mensajeAyuda,
@@ -105,7 +111,9 @@ class JuegoTurnoEstado {
     bool? todosListos,
     int? jugadoresListos,
     int? totalJugadores,
+    Map<String, TableroRival>? tablerosRivales,
     bool limpiarAncla = false,
+    bool limpiarCeldaAncla = false,
     bool limpiarDados = false,
     bool limpiarMensajeAyuda = false,
   }) {
@@ -116,9 +124,12 @@ class JuegoTurnoEstado {
       indiceDadoAncla: limpiarDados
           ? null
           : (indiceDadoAncla ?? this.indiceDadoAncla),
-      celdaAncla: (limpiarDados || limpiarAncla)
+      celdaAncla: (limpiarDados || limpiarAncla || limpiarCeldaAncla)
           ? null
           : (celdaAncla ?? this.celdaAncla),
+      celdasAnclaCandidatas: (limpiarDados || limpiarAncla)
+          ? const []
+          : (celdasAnclaCandidatas ?? this.celdasAnclaCandidatas),
       celdasObjetivoValidas: (limpiarDados || limpiarAncla)
           ? const []
           : (celdasObjetivoValidas ?? this.celdasObjetivoValidas),
@@ -143,6 +154,7 @@ class JuegoTurnoEstado {
       todosListos: todosListos ?? this.todosListos,
       jugadoresListos: jugadoresListos ?? this.jugadoresListos,
       totalJugadores: totalJugadores ?? this.totalJugadores,
+      tablerosRivales: tablerosRivales ?? this.tablerosRivales,
     );
   }
 }
@@ -154,6 +166,7 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.dado2,
     super.indiceDadoAncla,
     super.celdaAncla,
+    super.celdasAnclaCandidatas,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
     super.mensajeAyuda,
@@ -168,6 +181,7 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.esperandoDados,
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
+    super.tablerosRivales,
   });
 }
 
@@ -178,6 +192,7 @@ class JuegoRendicionLocal extends JuegoTurnoEstado {
     super.dado2,
     super.indiceDadoAncla,
     super.celdaAncla,
+    super.celdasAnclaCandidatas,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
     super.mensajeAyuda,
@@ -192,6 +207,7 @@ class JuegoRendicionLocal extends JuegoTurnoEstado {
     super.esperandoDados,
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
+    super.tablerosRivales,
   });
 }
 
@@ -202,6 +218,7 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.dado2,
     super.indiceDadoAncla,
     super.celdaAncla,
+    super.celdasAnclaCandidatas,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
     super.mensajeAyuda,
@@ -216,6 +233,7 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.esperandoDados,
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
+    super.tablerosRivales,
   });
 }
 
@@ -230,6 +248,7 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.dado2,
     super.indiceDadoAncla,
     super.celdaAncla,
+    super.celdasAnclaCandidatas,
     super.celdasObjetivoValidas,
     super.puntuacionTotal,
     super.mensajeAyuda,
@@ -244,6 +263,7 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.esperandoDados,
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
+    super.tablerosRivales,
     required this.idSocketGanador,
     required this.ganadorUsuario,
     required this.esGanadorLocal,

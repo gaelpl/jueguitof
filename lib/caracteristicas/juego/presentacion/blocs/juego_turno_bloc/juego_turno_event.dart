@@ -24,8 +24,8 @@ class EventoDadosLanzados extends JuegoTurnoEvento {
     required this.dado2,
     this.anfitrion,
     this.numeroRonda = 1,
-    this.segundosRestantes = 300,
-    this.duracionRondaSegundos = 300,
+    this.segundosRestantes = duracionRondaPorDefecto,
+    this.duracionRondaSegundos = duracionRondaPorDefecto,
   });
 }
 
@@ -135,4 +135,10 @@ class EventoEstadoListos extends JuegoTurnoEvento {
     required this.listos,
     required this.total,
   });
+}
+
+class EventoTablerosActualizados extends JuegoTurnoEvento {
+  final Map<String, dynamic> tableros;
+
+  EventoTablerosActualizados({required this.tableros});
 }

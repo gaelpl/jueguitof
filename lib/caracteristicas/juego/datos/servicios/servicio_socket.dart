@@ -60,6 +60,9 @@ class ServicioSocket {
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _controladorEstadoListos =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>>
+  _controladorTablerosActualizados =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   bool _enPartida = false;
   bool _conexionInestableActual = false;
@@ -88,6 +91,8 @@ class ServicioSocket {
       _controladorJugadorDesconectado.stream;
   Stream<Map<String, dynamic>> get estadoListos =>
       _controladorEstadoListos.stream;
+  Stream<Map<String, dynamic>> get tablerosActualizados =>
+      _controladorTablerosActualizados.stream;
   bool get conexionInestableActual => _conexionInestableActual;
   String? get idActual => _socket?.id;
 
@@ -240,6 +245,14 @@ class ServicioSocket {
       }
     });
 
+    socket.on('tableros_actualizados', (datos) {
+      if (datos is Map) {
+        _controladorTablerosActualizados.add(
+          Map<String, dynamic>.from(datos),
+        );
+      }
+    });
+
     socket.on('error_sala', (datos) {
       _controladorErrorSala.add(
         _obtenerMensaje(datos, 'No se pudo unir a la sala.'),
@@ -323,13 +336,14 @@ class ServicioSocket {
     socket.emit('conceder_partida', codigoSala.trim().toUpperCase());
   }
 
-  void marcarJugadorListo(String codigoSala) {
+  void marcarJugadorListo(String codigoSala, {required bool listo}) {
     final socket_io.Socket? socket = _socket;
     if (socket == null) {
       throw StateError('El socket no está inicializado.');
     }
     socket.emit('jugador_listo', {
       'codigoSala': codigoSala.trim().toUpperCase(),
+      'listo': listo,
     });
   }
 
@@ -339,6 +353,27 @@ class ServicioSocket {
       throw StateError('El socket no está inicializado.');
     }
     socket.emit('consultar_listos', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+    });
+  }
+
+  void enviarTablero(String codigoSala, Map<String, dynamic> tablero) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('tablero_actualizado', {
+      'codigoSala': codigoSala.trim().toUpperCase(),
+      'tablero': tablero,
+    });
+  }
+
+  void consultarTableros(String codigoSala) {
+    final socket_io.Socket? socket = _socket;
+    if (socket == null) {
+      throw StateError('El socket no está inicializado.');
+    }
+    socket.emit('consultar_tableros', {
       'codigoSala': codigoSala.trim().toUpperCase(),
     });
   }

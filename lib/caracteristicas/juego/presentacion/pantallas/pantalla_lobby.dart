@@ -340,7 +340,10 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     final bool esAnfitrion =
         estado.tuIdSocket != null && estado.tuIdSocket == estado.anfitrion;
     final bool puedeIniciar =
-        esAnfitrion && estado.jugadores.length >= 2 && !iniciando;
+        esAnfitrion &&
+        estado.jugadores.length >= 2 &&
+        estado.todosListos &&
+        !iniciando;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -468,23 +471,60 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
                 ),
               ),
             ),
-        ] else
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Esperando a que el anfitrión inicie...',
+          if (estado.jugadores.length >= 2 && !estado.todosListos)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text(
+                'Todos los jugadores deben estar listos para iniciar.',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _textoSecundario.withValues(alpha: 0.95),
+                  color: _textoSecundario,
                 ),
+              ),
+            ),
+        ] else
+          Column(
+            children: [
+              _BotonPrincipal(
+                cargando: iniciando,
+                texto: _tuListoEn(estado)
+                    ? 'Cancelar Listo'
+                    : 'Listo',
+                icono: _tuListoEn(estado)
+                    ? Icons.cancel_outlined
+                    : Icons.check_circle_outline,
+                onPressed: iniciando
+                    ? null
+                    : () {
+                        context.read<LobbyBloc>().add(
+                          CambiarListoJugador(
+                            codigo: estado.codigo,
+                            listo: !_tuListoEn(estado),
+                          ),
+                        );
+                      },
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.2),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Esperando a que el anfitrión inicie...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _textoSecundario.withValues(alpha: 0.95),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -498,6 +538,8 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
   ) {
     final bool esAnfitrion = jugador.idSocket == estado.anfitrion;
     final bool esTu = jugador.idSocket == estado.tuIdSocket;
+    final bool listo =
+        jugador.listo || estado.listosIds.contains(jugador.idSocket);
     final String inicial = jugador.usuario.isEmpty
         ? '?'
         : jugador.usuario[0].toUpperCase();
@@ -537,6 +579,39 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
               ),
             ),
           ),
+          Container(
+            margin: const EdgeInsets.only(left: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: listo
+                  ? const Color(0xFFDCFCE7)
+                  : const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  listo ? Icons.check_circle : Icons.schedule,
+                  size: 13,
+                  color: listo
+                      ? const Color(0xFF15803D)
+                      : _textoSecundario,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  listo ? 'Listo' : 'Esperando',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: listo
+                        ? const Color(0xFF15803D)
+                        : _textoSecundario,
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (esAnfitrion)
             Container(
               margin: const EdgeInsets.only(left: 6),
@@ -573,6 +648,15 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
             ),
         ],
       ),
+    );
+  }
+
+  bool _tuListoEn(EsperandoJugadores estado) {
+    final String? id = estado.tuIdSocket;
+    if (id == null) return false;
+    if (estado.listosIds.contains(id)) return true;
+    return estado.jugadores.any(
+      (jugador) => jugador.idSocket == id && jugador.listo,
     );
   }
 
