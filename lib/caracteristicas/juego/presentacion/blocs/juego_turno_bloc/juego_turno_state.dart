@@ -1,6 +1,7 @@
 import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/entidades/tablero_rival.dart';
 import '../../../dominio/logica/juego_logica.dart';
+import '../../../../ranked/dominio/entidades/resumen_partida.dart';
 
 class JuegoTurnoEstado {
   final Tablero tablero;
@@ -27,6 +28,8 @@ class JuegoTurnoEstado {
   final int jugadoresListos;
   final int totalJugadores;
   final Map<String, TableroRival> tablerosRivales;
+  final String modo;
+  final ResumenPartida? resultadoRanked;
 
   const JuegoTurnoEstado({
     required this.tablero,
@@ -53,9 +56,13 @@ class JuegoTurnoEstado {
     this.jugadoresListos = 0,
     this.totalJugadores = 0,
     this.tablerosRivales = const {},
+    this.modo = 'casual',
+    this.resultadoRanked,
   });
 
   bool get esMultijugador => anfitrion != null;
+
+  bool get esRanked => modo == 'ranked';
 
   bool get esAnfitrion =>
       esMultijugador && tuIdSocket != null && tuIdSocket == anfitrion;
@@ -112,6 +119,8 @@ class JuegoTurnoEstado {
     int? jugadoresListos,
     int? totalJugadores,
     Map<String, TableroRival>? tablerosRivales,
+    String? modo,
+    ResumenPartida? resultadoRanked,
     bool limpiarAncla = false,
     bool limpiarCeldaAncla = false,
     bool limpiarDados = false,
@@ -155,6 +164,8 @@ class JuegoTurnoEstado {
       jugadoresListos: jugadoresListos ?? this.jugadoresListos,
       totalJugadores: totalJugadores ?? this.totalJugadores,
       tablerosRivales: tablerosRivales ?? this.tablerosRivales,
+      modo: modo ?? this.modo,
+      resultadoRanked: resultadoRanked ?? this.resultadoRanked,
     );
   }
 }
@@ -182,6 +193,7 @@ class JuegoGanadoPorAbandono extends JuegoTurnoEstado {
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
     super.tablerosRivales,
+    super.modo,
   });
 }
 
@@ -208,6 +220,7 @@ class JuegoRendicionLocal extends JuegoTurnoEstado {
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
     super.tablerosRivales,
+    super.modo,
   });
 }
 
@@ -234,6 +247,7 @@ class JuegoCanceladoDesconexion extends JuegoTurnoEstado {
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
     super.tablerosRivales,
+    super.modo,
   });
 }
 
@@ -264,6 +278,7 @@ class JuegoFinalizadoPorPuntos extends JuegoTurnoEstado {
     super.segundosRestantesRonda,
     super.duracionRondaSegundos,
     super.tablerosRivales,
+    super.modo,
     required this.idSocketGanador,
     required this.ganadorUsuario,
     required this.esGanadorLocal,

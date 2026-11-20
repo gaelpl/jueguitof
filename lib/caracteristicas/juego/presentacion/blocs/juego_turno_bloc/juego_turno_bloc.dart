@@ -6,6 +6,7 @@ import '../../../datos/servicios/servicio_socket.dart';
 import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/entidades/tablero_rival.dart';
 import '../../../dominio/logica/juego_logica.dart';
+import '../../../../ranked/dominio/entidades/resumen_partida.dart';
 import 'juego_turno_event.dart';
 import 'juego_turno_state.dart';
 
@@ -36,6 +37,8 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
   late final StreamSubscription<Map<String, dynamic>> _suscripcionEstadoListos;
   late final StreamSubscription<Map<String, dynamic>>
   _suscripcionTablerosActualizados;
+  late final StreamSubscription<Map<String, dynamic>>
+  _suscripcionResultadoRanked;
 
   JuegoTurnoBloc(
     Tablero tableroInicial, {
@@ -47,6 +50,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     int? puntosParaGanar,
     String? tuIdSocket,
     String? anfitrion,
+    String modo = 'casual',
   }) : _servicioSocket = servicioSocket ?? ServicioSocket.instancia,
        _codigoSala = codigoSala,
        _numeroMapa = numeroMapa,
@@ -61,6 +65,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
            puntosParaGanar: puntosParaGanar,
            tuIdSocket: tuIdSocket,
            anfitrion: anfitrion,
+           modo: modo,
          ),
        ) {
     on<EventoLanzarDados>(_onLanzarDados);
@@ -82,6 +87,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     on<EventoJugadorSalio>(_onJugadorSalio);
     on<EventoEstadoListos>(_onEstadoListos);
     on<EventoTablerosActualizados>(_onTablerosActualizados);
+    on<EventoResultadoRankedRecibido>(_onResultadoRanked);
 
     _suscripcionRivalConcedio = _servicioSocket.rivalConcedio.listen(
       (_) => add(EventoRivalConcedio()),
@@ -203,6 +209,14 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
             );
           }
         });
+
+    _suscripcionResultadoRanked = _servicioSocket.resultadoRanked.listen((
+      datos,
+    ) {
+      add(
+        EventoResultadoRankedRecibido(resumen: ResumenPartida.desdeJson(datos)),
+      );
+    });
 
     if (_codigoSala != null) {
       _servicioSocket.iniciarPartida();
@@ -612,6 +626,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         esperandoDados: state.esperandoDados,
         segundosRestantesRonda: state.segundosRestantesRonda,
         duracionRondaSegundos: state.duracionRondaSegundos,
+        modo: state.modo,
       ),
     );
 
@@ -654,6 +669,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         esperandoDados: state.esperandoDados,
         segundosRestantesRonda: state.segundosRestantesRonda,
         duracionRondaSegundos: state.duracionRondaSegundos,
+        modo: state.modo,
       ),
     );
   }
@@ -688,6 +704,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         esperandoDados: state.esperandoDados,
         segundosRestantesRonda: state.segundosRestantesRonda,
         duracionRondaSegundos: state.duracionRondaSegundos,
+        modo: state.modo,
       ),
     );
   }
@@ -751,6 +768,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
         esperandoDados: state.esperandoDados,
         segundosRestantesRonda: state.segundosRestantesRonda,
         duracionRondaSegundos: state.duracionRondaSegundos,
+        modo: state.modo,
         idSocketGanador: event.idSocketGanador,
         ganadorUsuario: event.ganadorUsuario,
         esGanadorLocal: esGanadorLocal,
@@ -815,6 +833,15 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     emit(state.copyWith(tablerosRivales: rivales));
   }
 
+  void _onResultadoRanked(
+    EventoResultadoRankedRecibido event,
+    Emitter<JuegoTurnoEstado> emit,
+  ) {
+    _temporizadorRonda?.cancel();
+    _temporizadorRonda = null;
+    emit(state.copyWith(resultadoRanked: event.resumen));
+  }
+
   Map<String, dynamic> _serializarTableroLocal() {
     return {
       'numeroMapa': _numeroMapa,
@@ -838,10 +865,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     if (_codigoSala == null || !_servicioSocket.conectado) return;
 
     try {
-      _servicioSocket.enviarTablero(
-        _codigoSala,
-        _serializarTableroLocal(),
-      );
+      _servicioSocket.enviarTablero(_codigoSala, _serializarTableroLocal());
     } catch (_) {
       return;
     }
@@ -953,6 +977,7 @@ class JuegoTurnoBloc extends Bloc<JuegoTurnoEvento, JuegoTurnoEstado> {
     await _suscripcionJugadorDesconectado.cancel();
     await _suscripcionEstadoListos.cancel();
     await _suscripcionTablerosActualizados.cancel();
+    await _suscripcionResultadoRanked.cancel();
     if (_codigoSala != null) {
       _servicioSocket.finalizarPartida();
     }

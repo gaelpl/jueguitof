@@ -1,4 +1,5 @@
 import '../../../dominio/entidades/jugador_partida.dart';
+import '../../../dominio/entidades/modo_partida.dart';
 
 abstract class LobbyEvento {
   const LobbyEvento();
@@ -6,8 +7,12 @@ abstract class LobbyEvento {
 
 class CrearSalaSolicitada extends LobbyEvento {
   final int numeroMapa;
+  final ModoPartida modo;
 
-  const CrearSalaSolicitada({this.numeroMapa = 1});
+  const CrearSalaSolicitada({
+    this.numeroMapa = 1,
+    this.modo = ModoPartida.casual,
+  });
 }
 
 class UnirseSalaSolicitada extends LobbyEvento {
@@ -25,8 +30,13 @@ class IniciarPartidaSolicitada extends LobbyEvento {
 class SalaCreadaRecibida extends LobbyEvento {
   final String codigo;
   final String? tuIdSocket;
+  final ModoPartida modo;
 
-  const SalaCreadaRecibida(this.codigo, {this.tuIdSocket});
+  const SalaCreadaRecibida(
+    this.codigo, {
+    this.tuIdSocket,
+    this.modo = ModoPartida.casual,
+  });
 }
 
 class SalaActualizadaRecibida extends LobbyEvento {
@@ -38,6 +48,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
   final int? puntosParaGanar;
   final List<String> listosIds;
   final String? tuIdSocket;
+  final ModoPartida modo;
 
   const SalaActualizadaRecibida({
     required this.codigo,
@@ -48,6 +59,7 @@ class SalaActualizadaRecibida extends LobbyEvento {
     this.puntosParaGanar,
     this.listosIds = const [],
     this.tuIdSocket,
+    this.modo = ModoPartida.casual,
   });
 }
 
@@ -58,6 +70,7 @@ class PartidaListaRecibida extends LobbyEvento {
   final int numeroMapa;
   final String? anfitrion;
   final String? tuIdSocket;
+  final ModoPartida modo;
 
   const PartidaListaRecibida({
     required this.codigo,
@@ -66,6 +79,7 @@ class PartidaListaRecibida extends LobbyEvento {
     this.numeroMapa = 1,
     this.anfitrion,
     this.tuIdSocket,
+    this.modo = ModoPartida.casual,
   });
 }
 
@@ -87,10 +101,7 @@ class CambiarListoJugador extends LobbyEvento {
   final String codigo;
   final bool listo;
 
-  const CambiarListoJugador({
-    required this.codigo,
-    required this.listo,
-  });
+  const CambiarListoJugador({required this.codigo, required this.listo});
 }
 
 class ErrorSalaRecibido extends LobbyEvento {

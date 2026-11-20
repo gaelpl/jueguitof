@@ -1,4 +1,5 @@
 import '../../../dominio/entidades/jugador_partida.dart';
+import '../../../dominio/entidades/modo_partida.dart';
 
 abstract class LobbyEstado {
   const LobbyEstado();
@@ -20,6 +21,7 @@ class EsperandoJugadores extends LobbyEstado {
   final int? puntosParaGanar;
   final int numeroMapa;
   final List<String> listosIds;
+  final ModoPartida modo;
 
   const EsperandoJugadores({
     required this.codigo,
@@ -29,6 +31,7 @@ class EsperandoJugadores extends LobbyEstado {
     this.puntosParaGanar,
     this.numeroMapa = 1,
     this.listosIds = const [],
+    this.modo = ModoPartida.casual,
   });
 
   bool get todosListos =>
@@ -47,6 +50,7 @@ class IniciandoPartida extends EsperandoJugadores {
     super.puntosParaGanar,
     super.numeroMapa,
     super.listosIds,
+    super.modo,
   });
 }
 
@@ -61,6 +65,7 @@ class PartidaLista extends LobbyEstado {
   final String? anfitrion;
   final String? tuIdSocket;
   final int numeroMapa;
+  final ModoPartida modo;
 
   const PartidaLista({
     required this.codigo,
@@ -69,6 +74,7 @@ class PartidaLista extends LobbyEstado {
     this.anfitrion,
     this.tuIdSocket,
     this.numeroMapa = 1,
+    this.modo = ModoPartida.casual,
   });
 }
 

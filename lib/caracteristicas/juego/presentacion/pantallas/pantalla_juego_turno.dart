@@ -8,7 +8,10 @@ import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
 import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
+import '../../dominio/entidades/modo_partida.dart';
 import '../../dominio/logica/juego_logica.dart';
+import '../../../ranked/dominio/entidades/resumen_partida.dart';
+import '../../../ranked/presentacion/pantallas/pantalla_resumen_ranked.dart';
 import '../blocs/juego_turno_bloc/juego_turno_bloc.dart';
 import 'pantalla_menu_mapas.dart';
 import 'pantalla_reglas.dart';
@@ -22,6 +25,7 @@ class PantallaJuegoTurno extends StatefulWidget {
   final int? puntosParaGanar;
   final String? tuIdSocket;
   final String? anfitrion;
+  final ModoPartida modo;
 
   const PantallaJuegoTurno({
     super.key,
@@ -32,6 +36,7 @@ class PantallaJuegoTurno extends StatefulWidget {
     this.puntosParaGanar,
     this.tuIdSocket,
     this.anfitrion,
+    this.modo = ModoPartida.casual,
   });
 
   @override
@@ -47,6 +52,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
   bool _partidaTerminada = false;
   bool _dialogoRendicionAbierto = false;
   bool _sesionExpirada = false;
+  bool _resumenMostrado = false;
 
   @override
   void initState() {
@@ -97,6 +103,7 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
         puntosParaGanar: widget.puntosParaGanar,
         tuIdSocket: widget.tuIdSocket,
         anfitrion: widget.anfitrion,
+        modo: widget.modo.nombre,
       ),
       child: Builder(
         builder: (context) => PopScope(
@@ -142,6 +149,12 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             ),
             body: BlocConsumer<JuegoTurnoBloc, JuegoTurnoEstado>(
               listener: (context, state) {
+                if (state.resultadoRanked != null && !_resumenMostrado) {
+                  _resumenMostrado = true;
+                  _mostrarResumenRanked(context, state.resultadoRanked!);
+                  return;
+                }
+
                 final bool esTerminal =
                     state is JuegoRendicionLocal ||
                     state is JuegoGanadoPorAbandono ||
@@ -150,17 +163,19 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                 if (esTerminal && !_partidaTerminada) {
                   setState(() => _partidaTerminada = true);
                 }
-                if (state is JuegoGanadoPorAbandono) {
+                if (state is JuegoGanadoPorAbandono && !state.esRanked) {
                   _mostrarDialogoVictoria(context);
                 }
-                if (state is JuegoCanceladoDesconexion) {
+                if (state is JuegoCanceladoDesconexion && !state.esRanked) {
                   _mostrarDialogoDesconexion(context);
                 }
-                if (state is JuegoRendicionLocal && !_rendicionNotificada) {
+                if (state is JuegoRendicionLocal &&
+                    !state.esRanked &&
+                    !_rendicionNotificada) {
                   _rendicionNotificada = true;
                   _mostrarDialogoRendicion(context);
                 }
-                if (state is JuegoFinalizadoPorPuntos) {
+                if (state is JuegoFinalizadoPorPuntos && !state.esRanked) {
                   _mostrarDialogoVictoriaPorPuntos(context, state);
                 }
               },
@@ -487,16 +502,16 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                         style: TextStyle(fontSize: 16),
                                       ),
                                     ),
-                                 ],
-                               ),
-                             ),
-                             const SizedBox(height: 12),
-                             _construirMarcador(context, state),
-                             _construirLeyenda(state),
-                             _construirHistorial(state),
-                             _construirModoEspia(context, state),
-                           ],
-                         ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _construirMarcador(context, state),
+                            _construirLeyenda(state),
+                            _construirHistorial(state),
+                            _construirModoEspia(context, state),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -544,8 +559,9 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final jugador = rivales[index];
-                final bool disponible =
-                    state.tablerosRivales.containsKey(jugador.idSocket);
+                final bool disponible = state.tablerosRivales.containsKey(
+                  jugador.idSocket,
+                );
                 final String inicial = jugador.usuario.isEmpty
                     ? '?'
                     : jugador.usuario[0].toUpperCase();
@@ -670,10 +686,8 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                     );
                   }
 
-                  final lado = (MediaQuery.of(mapContext).size.width - 96).clamp(
-                    180.0,
-                    420.0,
-                  );
+                  final lado = (MediaQuery.of(mapContext).size.width - 96)
+                      .clamp(180.0, 420.0);
 
                   return SingleChildScrollView(
                     child: Column(
@@ -696,17 +710,14 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                               physics: const NeverScrollableScrollPhysics(),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 7,
-                                crossAxisSpacing: 3,
-                                mainAxisSpacing: 3,
-                              ),
+                                    crossAxisCount: 7,
+                                    crossAxisSpacing: 3,
+                                    mainAxisSpacing: 3,
+                                  ),
                               itemCount: 49,
                               itemBuilder: (cellContext, index) {
-                                final celda =
-                                    tableroRival.tablero.obtenerCeldaEn(
-                                  index % 7,
-                                  index ~/ 7,
-                                );
+                                final celda = tableroRival.tablero
+                                    .obtenerCeldaEn(index % 7, index ~/ 7);
                                 if (celda == null) return const SizedBox();
 
                                 return Container(
@@ -728,7 +739,8 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
                                             style: TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
-                                              color: celda.region ==
+                                              color:
+                                                  celda.region ==
                                                           Region.amarillo ||
                                                       celda.region ==
                                                           Region.blanco
@@ -1188,6 +1200,14 @@ class _PantallaJuegoTurnoState extends State<PantallaJuegoTurno> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _mostrarResumenRanked(BuildContext context, ResumenPartida resumen) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PantallaResumenRanked(resumen: resumen),
       ),
     );
   }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../autenticacion/datos/servicios/servicio_autenticacion.dart';
 import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
+import '../../../ranked/presentacion/blocs/clasificacion_bloc/clasificacion_bloc.dart';
+import '../../../ranked/presentacion/pantallas/pantalla_clasificacion.dart';
 import '../../datos/mapas_oficiales.dart';
 import 'pantalla_lobby.dart';
 import 'pantalla_reglas.dart';
@@ -166,101 +169,107 @@ class PantallaMenuMapas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _fondoClaro,
-      body: Column(
-        children: [
-          _construirEncabezado(context),
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 26, 24, 36),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _construirAccesoMultijugador(context),
-                      const SizedBox(height: 16),
-                      _construirAccesoReglas(context),
-                      const SizedBox(height: 26),
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Selecciona un mapa',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: _textoPrincipal,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _azulProfundo.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              '4 niveles',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _azulProfundo,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Elige un nivel para configurar sus estrellas y comenzar la partida.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: _textoSecundario,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final int columnas = constraints.maxWidth >= 640
-                              ? 2
-                              : 1;
-                          const double separacion = 16;
-                          final double anchoTarjeta = columnas == 1
-                              ? constraints.maxWidth
-                              : (constraints.maxWidth - separacion) / 2;
-
-                          return Wrap(
-                            spacing: separacion,
-                            runSpacing: separacion,
-                            children: [
-                              for (final opcion in _opciones)
-                                SizedBox(
-                                  width: anchoTarjeta,
-                                  child: _TarjetaMapa(
-                                    opcion: opcion,
-                                    onTap: () =>
-                                        _abrirMapa(context, opcion.numero),
-                                  ),
+    return BlocProvider(
+      create: (_) =>
+          ClasificacionBloc()..add(const CargarClasificacion(limite: 100)),
+      child: Scaffold(
+        backgroundColor: _fondoClaro,
+        body: Column(
+          children: [
+            _construirEncabezado(context),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 36),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _construirAccesoMultijugador(context),
+                        const SizedBox(height: 16),
+                        _construirAccesoReglas(context),
+                        const SizedBox(height: 26),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Selecciona un mapa',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: _textoPrincipal,
+                                  letterSpacing: -0.4,
                                 ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _azulProfundo.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                '4 niveles',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _azulProfundo,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Elige un nivel para configurar sus estrellas y comenzar la partida.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _textoSecundario,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final int columnas = constraints.maxWidth >= 640
+                                ? 2
+                                : 1;
+                            const double separacion = 16;
+                            final double anchoTarjeta = columnas == 1
+                                ? constraints.maxWidth
+                                : (constraints.maxWidth - separacion) / 2;
+
+                            return Wrap(
+                              spacing: separacion,
+                              runSpacing: separacion,
+                              children: [
+                                for (final opcion in _opciones)
+                                  SizedBox(
+                                    width: anchoTarjeta,
+                                    child: _TarjetaMapa(
+                                      opcion: opcion,
+                                      onTap: () =>
+                                          _abrirMapa(context, opcion.numero),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 26),
+                        const TarjetaTop5Clasificacion(),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -485,9 +494,9 @@ class PantallaMenuMapas extends StatelessWidget {
                       ),
                     ],
                   ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
           ),
         ),
       ),

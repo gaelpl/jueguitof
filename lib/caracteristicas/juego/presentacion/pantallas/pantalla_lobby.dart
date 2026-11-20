@@ -7,6 +7,7 @@ import '../../../autenticacion/presentacion/pantallas/pantalla_login.dart';
 import '../../datos/mapas_oficiales.dart';
 import '../../datos/servicios/servicio_socket.dart';
 import '../../dominio/entidades/jugador_partida.dart';
+import '../../dominio/entidades/modo_partida.dart';
 import '../blocs/lobby_bloc/lobby_bloc.dart';
 import 'pantalla_reglas.dart';
 import 'pantalla_seleccion_inicial.dart';
@@ -41,6 +42,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
   final GlobalKey<FormState> _formularioKey = GlobalKey<FormState>();
   final TextEditingController _codigoControlador = TextEditingController();
 
+  ModoPartida _modoSeleccionado = ModoPartida.casual;
   bool _navegacionRealizada = false;
   bool _redirigiendoSesion = false;
 
@@ -89,6 +91,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
           puntosParaGanar: estado.puntosParaGanar,
           tuIdSocket: estado.tuIdSocket,
           anfitrion: estado.anfitrion,
+          modo: estado.modo,
         ),
       ),
     );
@@ -128,7 +131,9 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     );
 
     if (numeroMapa == null || !mounted) return;
-    context.read<LobbyBloc>().add(CrearSalaSolicitada(numeroMapa: numeroMapa));
+    context.read<LobbyBloc>().add(
+      CrearSalaSolicitada(numeroMapa: numeroMapa, modo: _modoSeleccionado),
+    );
   }
 
   @override
@@ -583,9 +588,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
             margin: const EdgeInsets.only(left: 6),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-              color: listo
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFE2E8F0),
+              color: listo ? const Color(0xFFDCFCE7) : const Color(0xFFE2E8F0),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -594,9 +597,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
                 Icon(
                   listo ? Icons.check_circle : Icons.schedule,
                   size: 13,
-                  color: listo
-                      ? const Color(0xFF15803D)
-                      : _textoSecundario,
+                  color: listo ? const Color(0xFF15803D) : _textoSecundario,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -604,9 +605,7 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: listo
-                        ? const Color(0xFF15803D)
-                        : _textoSecundario,
+                    color: listo ? const Color(0xFF15803D) : _textoSecundario,
                   ),
                 ),
               ],
@@ -660,6 +659,101 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     );
   }
 
+  Widget _construirSelectorModo({required bool ocupado}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'MODO DE PARTIDA',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.6,
+            color: _textoSecundario,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: _fondoCampo,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              for (final modo in ModoPartida.values)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: ocupado
+                        ? null
+                        : () => setState(() => _modoSeleccionado = modo),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _modoSeleccionado == modo
+                            ? Colors.white
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _modoSeleccionado == modo
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A)
+                                      .withValues(alpha: 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            modo == ModoPartida.ranked
+                                ? Icons.military_tech_rounded
+                                : Icons.sports_esports_rounded,
+                            size: 16,
+                            color: _modoSeleccionado == modo
+                                ? _azulProfundo
+                                : _textoSecundario,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            modo.etiqueta,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _modoSeleccionado == modo
+                                  ? _azulProfundo
+                                  : _textoSecundario,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (_modoSeleccionado == ModoPartida.ranked)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Las partidas ranked otorgan o restan RP y aparecen en la clasificación.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: _textoSecundario,
+                height: 1.3,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _construirFormulario({
     required bool ocupado,
     required bool creandoSala,
@@ -668,9 +762,13 @@ class _PantallaLobbyContenidoState extends State<_PantallaLobbyContenido> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _construirSelectorModo(ocupado: ocupado),
+        const SizedBox(height: 18),
         _BotonPrincipal(
           cargando: creandoSala,
-          texto: 'Crear Partida',
+          texto: _modoSeleccionado == ModoPartida.ranked
+              ? 'Crear Partida Ranked'
+              : 'Crear Partida',
           icono: Icons.add_circle_outline_rounded,
           onPressed: _solicitarCrearSala,
         ),
@@ -844,9 +942,7 @@ class _BotonPrincipal extends StatelessWidget {
     final List<Color> colores = activo
         ? const [Color(0xFF047857), Color(0xFF10B981)]
         : const [_azulProfundo, _cian];
-    final Color colorSombra = activo
-        ? const Color(0xFF047857)
-        : _azulProfundo;
+    final Color colorSombra = activo ? const Color(0xFF047857) : _azulProfundo;
 
     return DecoratedBox(
       decoration: BoxDecoration(

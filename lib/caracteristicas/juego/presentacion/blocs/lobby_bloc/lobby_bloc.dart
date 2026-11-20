@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../datos/servicios/servicio_socket.dart';
 import '../../../dominio/entidades/jugador_partida.dart';
+import '../../../dominio/entidades/modo_partida.dart';
 import 'lobby_event.dart';
 import 'lobby_state.dart';
 
@@ -12,14 +13,14 @@ export 'lobby_state.dart';
 
 class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
   final ServicioSocket _servicioSocket;
+  ModoPartida _modoSolicitado = ModoPartida.casual;
 
   late final StreamSubscription<String> _suscripcionSalaCreada;
   late final StreamSubscription<Map<String, dynamic>>
   _suscripcionSalaActualizada;
   late final StreamSubscription<Map<String, dynamic>> _suscripcionPartidaLista;
   late final StreamSubscription<String> _suscripcionErrorSala;
-  late final StreamSubscription<Map<String, dynamic>>
-  _suscripcionEstadoListos;
+  late final StreamSubscription<Map<String, dynamic>> _suscripcionEstadoListos;
   late final StreamSubscription<String> _suscripcionErrorConexion;
   late final StreamSubscription<bool> _suscripcionSesionInvalida;
 
@@ -37,6 +38,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           codigo: evento.codigo,
           anfitrion: evento.tuIdSocket,
           tuIdSocket: evento.tuIdSocket,
+          modo: evento.modo == ModoPartida.casual
+              ? _modoSolicitado
+              : evento.modo,
         ),
       ),
     );
@@ -48,6 +52,12 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           ? (estadoActual.tuIdSocket ?? evento.tuIdSocket)
           : evento.tuIdSocket;
 
+      final ModoPartida modo =
+          evento.modo == ModoPartida.casual &&
+              estadoActual is EsperandoJugadores &&
+              estadoActual.modo == ModoPartida.ranked
+          ? estadoActual.modo
+          : evento.modo;
       final EsperandoJugadores base = estadoActual is IniciandoPartida
           ? IniciandoPartida(
               codigo: evento.codigo,
@@ -57,6 +67,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
               puntosParaGanar: evento.puntosParaGanar,
               numeroMapa: evento.numeroMapa,
               listosIds: evento.listosIds,
+              modo: modo,
             )
           : EsperandoJugadores(
               codigo: evento.codigo,
@@ -66,6 +77,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
               puntosParaGanar: evento.puntosParaGanar,
               numeroMapa: evento.numeroMapa,
               listosIds: evento.listosIds,
+              modo: modo,
             );
 
       emitir(_estadoConListos(base, evento.listosIds));
@@ -79,6 +91,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           anfitrion: evento.anfitrion,
           tuIdSocket: evento.tuIdSocket,
           numeroMapa: evento.numeroMapa,
+          modo: evento.modo,
         ),
       ),
     );
@@ -109,6 +122,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           puntosParaGanar: _comoEntero(datos['puntosParaGanar']),
           listosIds: _parsearIds(datos['listosIds']),
           tuIdSocket: _servicioSocket.idActual,
+          modo: ModoPartida.desdeNombre(datos['modo']?.toString()),
         ),
       );
     });
@@ -121,6 +135,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
           numeroMapa: _comoEntero(datos['numeroMapa']) ?? 1,
           anfitrion: datos['anfitrion']?.toString(),
           tuIdSocket: datos['tuSocketId']?.toString(),
+          modo: ModoPartida.desdeNombre(datos['modo']?.toString()),
         ),
       );
     });
@@ -149,11 +164,15 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     CrearSalaSolicitada evento,
     Emitter<LobbyEstado> emitir,
   ) async {
+    _modoSolicitado = evento.modo;
     emitir(const CreandoSala());
 
     try {
       await _servicioSocket.conectar();
-      _servicioSocket.crearSala(numeroMapa: evento.numeroMapa);
+      _servicioSocket.crearSala(
+        numeroMapa: evento.numeroMapa,
+        modo: evento.modo,
+      );
     } on SesionNoActivaException {
       emitir(const SesionExpiradaLobby());
     } catch (error) {
@@ -228,6 +247,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         puntosParaGanar: estadoActual.puntosParaGanar,
         numeroMapa: estadoActual.numeroMapa,
         listosIds: estadoActual.listosIds,
+        modo: estadoActual.modo,
       ),
     );
 
@@ -262,10 +282,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       if (!_servicioSocket.conectado) {
         await _servicioSocket.conectar();
       }
-      _servicioSocket.marcarJugadorListo(
-        evento.codigo,
-        listo: listoDestino,
-      );
+      _servicioSocket.marcarJugadorListo(evento.codigo, listo: listoDestino);
     } on SesionNoActivaException {
       emitir(const SesionExpiradaLobby());
     } catch (error) {
@@ -299,10 +316,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     );
   }
 
-  EsperandoJugadores _estadoConListo(
-    EsperandoJugadores estado,
-    bool listo,
-  ) {
+  EsperandoJugadores _estadoConListo(EsperandoJugadores estado, bool listo) {
     final String? id = estado.tuIdSocket;
     final Set<String> ids = estado.listosIds.toSet();
 
@@ -316,8 +330,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
 
     final List<JugadorPartida> jugadores = estado.jugadores
         .map(
-          (jugador) =>
-              jugador.idSocket == id ? jugador.copiarCon(listo: listo) : jugador,
+          (jugador) => jugador.idSocket == id
+              ? jugador.copiarCon(listo: listo)
+              : jugador,
         )
         .toList();
 
@@ -332,8 +347,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     final Set<String> ids = listosIds.toSet();
     final List<JugadorPartida> jugadores = estado.jugadores
         .map(
-          (jugador) =>
-              jugador.copiarCon(listo: ids.contains(jugador.idSocket)),
+          (jugador) => jugador.copiarCon(listo: ids.contains(jugador.idSocket)),
         )
         .toList();
 
@@ -362,6 +376,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         puntosParaGanar: estado.puntosParaGanar,
         numeroMapa: estado.numeroMapa,
         listosIds: listosIds,
+        modo: estado.modo,
       );
     }
 
@@ -373,6 +388,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
       puntosParaGanar: estado.puntosParaGanar,
       numeroMapa: estado.numeroMapa,
       listosIds: listosIds,
+      modo: estado.modo,
     );
   }
 

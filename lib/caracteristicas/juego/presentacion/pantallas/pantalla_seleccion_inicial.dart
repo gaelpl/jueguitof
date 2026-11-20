@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../nucleo/tema/colores_region.dart';
 import '../../dominio/entidades/jugador_partida.dart';
+import '../../dominio/entidades/modo_partida.dart';
 import '../../dominio/logica/juego_logica.dart';
 import '../blocs/inicio_juego_bloc/inicio_juego_bloc.dart';
 import 'pantalla_juego_turno.dart';
@@ -15,6 +16,7 @@ class PantallaSeleccionInicial extends StatefulWidget {
   final int? puntosParaGanar;
   final String? tuIdSocket;
   final String? anfitrion;
+  final ModoPartida modo;
 
   const PantallaSeleccionInicial({
     super.key,
@@ -25,6 +27,7 @@ class PantallaSeleccionInicial extends StatefulWidget {
     this.puntosParaGanar,
     this.tuIdSocket,
     this.anfitrion,
+    this.modo = ModoPartida.casual,
   });
 
   @override
@@ -56,6 +59,7 @@ class _PantallaSeleccionInicialState extends State<PantallaSeleccionInicial> {
                     puntosParaGanar: widget.puntosParaGanar,
                     tuIdSocket: widget.tuIdSocket,
                     anfitrion: widget.anfitrion,
+                    modo: widget.modo,
                   ),
                 ),
               );

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../../../../nucleo/configuracion/entorno.dart';
+import '../../dominio/entidades/modo_partida.dart';
 
 class SesionNoActivaException implements Exception {
   final String mensaje;
@@ -63,6 +64,12 @@ class ServicioSocket {
   final StreamController<Map<String, dynamic>>
   _controladorTablerosActualizados =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorResultadoRanked =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<void> _controladorClasificacionActualizada =
+      StreamController<void>.broadcast();
+  final StreamController<Map<String, dynamic>> _controladorJugadorReconectado =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   bool _enPartida = false;
   bool _conexionInestableActual = false;
@@ -93,6 +100,12 @@ class ServicioSocket {
       _controladorEstadoListos.stream;
   Stream<Map<String, dynamic>> get tablerosActualizados =>
       _controladorTablerosActualizados.stream;
+  Stream<Map<String, dynamic>> get resultadoRanked =>
+      _controladorResultadoRanked.stream;
+  Stream<void> get clasificacionActualizada =>
+      _controladorClasificacionActualizada.stream;
+  Stream<Map<String, dynamic>> get jugadorReconectado =>
+      _controladorJugadorReconectado.stream;
   bool get conexionInestableActual => _conexionInestableActual;
   String? get idActual => _socket?.id;
 
@@ -247,9 +260,23 @@ class ServicioSocket {
 
     socket.on('tableros_actualizados', (datos) {
       if (datos is Map) {
-        _controladorTablerosActualizados.add(
-          Map<String, dynamic>.from(datos),
-        );
+        _controladorTablerosActualizados.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('resultado_ranked', (datos) {
+      if (datos is Map) {
+        _controladorResultadoRanked.add(Map<String, dynamic>.from(datos));
+      }
+    });
+
+    socket.on('clasificacion_actualizada', (_) {
+      _controladorClasificacionActualizada.add(null);
+    });
+
+    socket.on('jugador_reconectado', (datos) {
+      if (datos is Map) {
+        _controladorJugadorReconectado.add(Map<String, dynamic>.from(datos));
       }
     });
 
@@ -271,12 +298,12 @@ class ServicioSocket {
     socket.connect();
   }
 
-  void crearSala({int numeroMapa = 1}) {
+  void crearSala({int numeroMapa = 1, ModoPartida modo = ModoPartida.casual}) {
     final socket_io.Socket? socket = _socket;
     if (socket == null) {
       throw StateError('El socket no está inicializado.');
     }
-    socket.emit('crear_sala', {'numeroMapa': numeroMapa});
+    socket.emit('crear_sala', {'numeroMapa': numeroMapa, 'modo': modo.nombre});
   }
 
   void unirseSala(String codigo) {

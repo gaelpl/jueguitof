@@ -1,5 +1,6 @@
 import '../../../dominio/entidades/jugador_partida.dart';
 import '../../../dominio/logica/juego_logica.dart';
+import '../../../../ranked/dominio/entidades/resumen_partida.dart';
 
 abstract class JuegoTurnoEvento {}
 
@@ -141,4 +142,10 @@ class EventoTablerosActualizados extends JuegoTurnoEvento {
   final Map<String, dynamic> tableros;
 
   EventoTablerosActualizados({required this.tableros});
+}
+
+class EventoResultadoRankedRecibido extends JuegoTurnoEvento {
+  final ResumenPartida resumen;
+
+  EventoResultadoRankedRecibido({required this.resumen});
 }
